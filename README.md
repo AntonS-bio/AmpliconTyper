@@ -2,7 +2,7 @@
 Tool for genotyping Oxford Nanopore amplicon sequencing data
 
 ## Purpose
-This tool is intended to be used with a partner HandyAmpliconTool which helps to design primers for environmental surveillance. The partner tools designs primers for specific genotypes (based on SNPs unique to those genotypes) while minimising risk of amplyfing other DNA that might be present in the environment.
+This tool is intended to be used with a partner [AmpliSeqDesigner](https://github.com/AntonS-bio/AmpliSeqDesigner) which helps to design primers for environmental surveillance. The partner tools designs primers for specific genotypes (based on SNPs unique to those genotypes) while minimising risk of amplyfing other DNA that might be present in the environment.
 
 This tool, AmpliconTyper, has two modes: 
     1. Train a classification model using existing Nanopore data - this can be your own data, data from genomic repositories (ENA, NCBI, DDBJ) or a mix of these
@@ -15,13 +15,13 @@ The easiest way to setup the tool is to use conda or mamba. If you are using mac
 
 The best practice is to install packages in dedicated environment to avoid software conflicts. To create new environment and install AmpliconTyper into it use:
 ```
-conda create --name  hrgENV -c bioconda -c conda-forge amplicontyper
+conda create --name  amplicontyperENV -c bioconda -c conda-forge amplicontyper
 ```
 Once installed, use
 ```
-conda activate hrgENV
+conda activate amplicontyperENV
 ```
-to activate the environment. Now you are ready to use the AmpliconTyper. You would need to run activation command (but not create command) every time you start a new terminal. In both commands above "hrgENV" can be replaced with whatever you want to call the environment. 
+to activate the environment. Now you are ready to use the AmpliconTyper. You would need to run activation command (but not create command) every time you start a new terminal. In both commands above "amplicontyperENV" can be replaced with whatever you want to call the environment. 
 
 
 
@@ -100,7 +100,7 @@ Run_20
                ↳ FAX83461_pass_barcode3_503f1897_ffa628d1_2.fastq.gz
                ↳ FAX83461_pass_barcode3_503f1897_ffa628d1_3.fastq.gz
 ```
-Normally, you'd need to merge the the files from each barcode before mapping, but HandyReadGenotype will do it for you.
+Normally, you'd need to merge the the files from each barcode before mapping, but AmpliconTyper will do it for you.
 
 **IMPORTANT if AmpliconTyper is doing the mapping, it will call each output BAM by the name with corresponding barcode (ex. barcode2.bam), this may overwrite some old BAMs**
 
@@ -141,7 +141,9 @@ Options -l allows the aligned portion of read to be shorter or longer than refer
 
 ### Understanding results
 
-![GitHub image](https://github.com/user-attachments/assets/5fd6d0e4-b6f2-40e6-94f0-cc750c8ee6a7)
+![GitHubReadMeImage](https://github.com/user-attachments/assets/9f86e6f1-ddad-4a86-8561-1d92c4aa9be3)
+
+
 
 
 
@@ -152,17 +154,21 @@ A) the name of the model file used and the date that model was trained.
 
 B) A diagram of how many amplicons have a certain number of SNPs in consensus sequence. The position of the number indicates the number of SNPs and the number itself - the number of amplicons. In first sample, 3 amplicons have 0 SNPs (0th place), and 1 amplicon has 2 SNPs (third place). In the second sample, 12 amplicons have 0 SNPs (0th place) and 2 amplicons has 1 SNP (second place). This simultaneously shows the presence of products and identified possible off-target amplification.
 
-C) List of genotype alleles identified in the amplicons. The number in brackets indicates percentage of reads (read depth) that support the genotype assignment. Sometimes, a reference position that is linked to specific genotype has unexpected nucleotide. This is reported as "Unknown allele at known position".
+C) In S. Typhi, some genotypes are labels are not strictly hierarchical. For example, genotypes 2, 3 and 4 are a subset of genotype 1, genotypes 3 and 4 are subset of genotype 2 and genotype 4 is subset of genotype 3. This means that identification of these genotypes cannot be done on basis of a single SNP, because SNP that separates genotypes 0-1 from genotype 2 will also be present in genotypes 3 and 4. For these high level genotypes special logic is used to determine which of these genotypes (0, 1, 2, 3 and 4) are possible with within a sample. The possible genotypes are reported in this field. When "Any" is reported, amplicons provide no information of high level genotypes.
 
-D) List of AMR linked alles idenfitied in the amplicons. The number in brackets indicates percentage of reads (read depth) that support the genotype assignment. In cases where genotype is based on presence/absence of amplicon (eg. S. Typhi PST6 plasmid) the amplicon name will be reported here if detected..
+D) List of genotype alleles identified in the amplicons. The number in brackets indicates percentage of reads (read depth) that support the genotype assignment. Sometimes, a reference position that is linked to specific genotype has unexpected nucleotide. This is reported as "Unknown allele at known position".
 
-E) When classification was done from FASTQ files, this show the total number of reads in each sample.
+E) List of AMR linked alles idenfitied in the amplicons. The number in brackets indicates percentage of reads (read depth) that support the genotype assignment. In cases where genotype is based on presence/absence of amplicon (eg. S. Typhi PST6 plasmid) the amplicon name will be reported here if detected..
 
-F) This shows the total number of reads that mapped to some amplicon and also were of correct length taking options "-s" and "-l" into account. 
+F) When classification was done from FASTQ files, this show the total number of reads in each sample.
 
-G) This is number of reads of wrong length. Note that normally, not all reads are mapped, so H + I <> G
+G) This shows the total number of reads that mapped to some amplicon and also were of correct length taking options "-s" and "-l" into account. 
 
-The rest of repot contains details on each sample as well as each sample's amplicon and these can be jumped to via hyperlinks in the report file.
+H) This is number of reads of wrong length. Note that normally, not all reads are mapped, so H + I <> G
+
+The rest of report contains details on each sample as well as each sample's amplicon and these can be jumped to via hyperlinks in the report file.
+
+In addtion to the HTML report, the classify command also outputs a tab delimited file with the same name as the HTML file. This delimited file contains all the fields from the HTML report for simpler aggregation of results and downstream analysis.
 
 
 ## Getting data out of model file
