@@ -54,6 +54,32 @@ options:
 
 ```
 
+## Example model training
+The repository has a directory "test_train_data" in which you fill find:
+- file "amplicons.fna" which contains amplicons that we want to train the model on
+- file "amplicons.bed" which contains the sub-regions of "amplicons.fna" that we want to train the model on. In most cases, you would want to train the model on whole amplicon.
+- file "amplicons.vcf" which contains the list of SNPs (if any) that we want to target for organism genotyping or AMR genotype classification. If you look at example file, you will see that ID field of VCF is used to tell AmpliconTyper whether SNP is linked to genotype, AMR or neither.
+       * example 1: the ID field with "gyrA_D87G:AMR" tells AmpliconTyper that the mutation at this position is linked to AMR (due to ":AMR") and the AMR genotype is called “gyrA_D87G:AMR”. If AmpliconTyper encounters this mutation during classification, it will report it in "Implied AMR" column and call it "gyrA_D87G"
+       * example 2: the ID field with "4:GT" tells AmpliconTyper that the mutation at this position is linked to genotype (due to ":GT") and if this mutation is detected it implies genotype "4". If AmpliconTyper encounters this mutation during classification, it will report it in "Implied Genotypes" column and call it "4"
+       * example 3: the ID field neither ":GT", nor ":AMR" suffix (e.g. if field has "Other") tell AmpliconTyper that this position should be ignored during training, and during classification, if a mutation is detected it will be reported in column "Dominant known SNPs".
+- a directory "positive_bams" which contains BAM files and their indices. The BAM files are based on ONT sequencing samples of the organism you want to detect. For example, if you are looking at S. Typhi, you would generate BAMs by aligning ONT isolates of S. Typhi to "amplicons.fna" 
+- a directory "negative_bams" which contains BAM files and their indices. The BAM files are based on ONT sequencing samples that are known to come non-target organism. If positive_bams contains data from S. Typhi, the negative BAMs would contain organisms other than S. Typhi. Ideally, you should have as many negative_bams as possible to ensure that classifier is trained on diverse set. When using "classify" function later, the main problem is when classifier encounters organisms it has never seen before.
+
+The above are all the data you need to train a classifier model. However, directory contains a few additional files that contain training outputs:
+- a directory "output" which contains trained model "model.pkl" and summmary of model quality "quality.tsv" showing it's specificity and senstivity based on training data.
+- a file "train_validation.html" which was generated using newly trained "model.pkl" and BAMS from "/test_data/bams/" directory
+- a file "train_validation.tsv" which is a machine readable version of the HTML.
+
+To train a model using test data, you will need to dowload "test_train_data" and run the following command:
+```
+train -t amplicons.bed  -p ./positive_bams/ -n ./negative_bams/ -v amplicons.vcf -o ./output/ --cpus 1 -r amplicons.fna
+```
+Once the model training is done, you can use the produced model to classify BAM file which is alligned to the same reference that was used to train the model. Assuming you are using BAMS from "test_data/bams/" you can do this using:
+```
+classify -b ./test_data/bams/ -m ./output/model.pkl -o train_validation.html
+```
+This should produce a report file "train_validation.html" containing classification reusults.
+
 ## Reads classification (must have a trained model, see Model training above)
 The purpose of classifier is to take all reads provided to it and identify which came from your target and which from non-target. The classifier will use extra information you provide to generate a nice HTML report file with results - you can see sample here in test_data/report.html. If you download this file it can be opened in any browser. 
 
