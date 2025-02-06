@@ -3,7 +3,7 @@ from os.path import exists
 from typing import Dict, List, Tuple
 import uuid
 from datetime import datetime
-from sklearn.ensemble import VotingClassifier, RandomForestClassifier
+from sklearn.ensemble import VotingClassifier#, RandomForestClassifier
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
@@ -12,12 +12,12 @@ import numpy as np
 import pysam as ps
 from data_classes import Amplicon
 
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.naive_bayes import CategoricalNB
+#from sklearn.tree import DecisionTreeClassifier
+#from sklearn.svm import SVC
+#from sklearn.naive_bayes import GaussianNB
+#from sklearn.neighbors import KNeighborsClassifier
+#from sklearn.neural_network import MLPClassifier
+#from sklearn.naive_bayes import CategoricalNB
 
 
 base_dic={"A":1,"C":2,"G":3,"T":4,"N":5,"-":0}

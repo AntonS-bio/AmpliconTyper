@@ -210,6 +210,7 @@ async def classify(temp_dir, args):
     
 async def run():
     temp_dir=expanduser( join("./",str(uuid.uuid4())) )
+
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)

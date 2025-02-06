@@ -334,7 +334,10 @@ class ReportingGenotype:
                 if allele.implication in self._levels:
                     if lowest_gt is None or self._levels[allele.implication]>self._levels[lowest_gt.implication]:
                         lowest_gt=allele
-            return lowest_gt.implication+" ("+'{:.0%}'.format(lowest_gt.freq)+")"
+            if lowest_gt is None: #the identified allele(s) are not genotype specific
+                return ""
+            else:
+                return lowest_gt.implication+" ("+'{:.0%}'.format(lowest_gt.freq)+")"
 
     def possible_high_level_gts(self, alleles: List[AlleleInfo], genotypes_matrix: pd.DataFrame) -> List[str]:
         '''Returns possible values for high level genotypes

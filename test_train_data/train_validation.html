@@ -1,0 +1,109 @@
+<html>
+<body>
+<head>
+    <style>
+      html * {
+        font-family: arial;
+      }
+	.help-icon {
+	content: url(data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAACUAAAAjCAIAAACcpVRJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGNSURBVFhHxZU7boNAFEWz5KyDMkugYA0WRXooESWSW4RE5548Zq7HzJ3/SI6vTuO8z4mHIfk6svP98xsCHRlJ+2h1HMyEE/PRrnww70vQRytKwRYnHh9Nappu7pfHuqNHRT5u/Tg3TrMBjZewjwZOuvtkaTxZl6AVHc9YPmoVmtuGWjL71jrjGjSovHzUdJIv09nvyW8Z8c0TKiaP6Ta8Nqonisoz6zhcNrxA2fioLDSjvSvwu3PbkTjVkG/o7avYd9Rg4GOYbtQAdPX0UUFhbwk/GKFd0KUT8glSDfnyoZN4s895YSInr3z0oyKcy3Icy0w9RLVvaJ2XIXI5DXU+fmYqWxs+SUOFzycL/zEjin10+89E3xai0NfdV0gQ+c/APVHKfHwhC2VCmc8+zNxndqXofbdvSslj08jQJ3wSKryJf/VpEXwSKvuoP0+MfNInoSaHSh/6VSyfhFptanxofoZ9Ehq4UOxD5yUen4TG6sAuO36fDs3ng3lfYj4d2hUHM+GkfSa0+go6kjmOP/BCFUG6Xal8AAAAAElFTkSuQmCC) ;
+	width: 15;
+	height: 15;
+	}	  
+    <style type="text/css">
+    .table_header {
+        font-weight: bold;
+    }
+    .header_line {
+        font-weight: bold;
+		font-size: 18px;
+    }
+	table, th, td {
+		border: 1px solid black;
+	}
+	.diagram {
+		line-height: 0.2;
+		font-family: Courier;
+		letter-spacing: 0px;
+	}		
+	td {
+	  max-width:250px;
+	  text-align: center;
+	  word-wrap: break-word;
+	}
+	.td_alt {
+	  max-width:250px;
+	  text-align: left;
+	  word-wrap: break-word;
+	}	
+	.td_alt_wide {
+	  max-width:450px;
+	  text-align: left;
+	  word-wrap: break-word;
+	}	
+	.alt_row{
+		background-color:#b0e0e6;
+	}
+
+    </style>
+</head>
+<div class=header_line><a name="Summary">Summary of results</div>
+<div>Model name: model, model date: 06/Feb/25</div>
+<br/>
+<table>
+	<tbody>
+<tr class=table_header><td>Sample  <img class="help-icon" title="Sample name, you can make it more informative by adding sample description using options -c and -d."></td><td>Amplicons by # of dominant unknown SNPs  <img class="help-icon" title="Numbers means number of amplicons, number's position-1 indicates how many unknown SNPs these amplicons have.&#10E.g. 2,0,4,0,0 means there are 2 amplicons without unknown SNPs (position is 1, so 1-1=0), and 4 amplicons with 2 unknown SNPs each (position is 3-1=2).&#10Only examines the amplicons that should be always present i.e. excludes plasmids, recombinations, etc."></td><td>Implied Genotypes  <img class="help-icon" title="Relevant for some organisms (e.g. S. Typhi) where some genotypes cannot be determined with single SNP.&#10Shows high level genotypes (in S. Typhi these are 0, 1, 2, 3, 4) that are possible given detected amplicons.&#10Uses all alleles that are supported by >50reads.&#10'Any' means detected amplicons provide no information on the high level genotypes."></td><td>Implied AMR  <img class="help-icon" title="Shows only the most specific genotype based on detected amplicons. Will not show multiple genotypes even if sample consists of more than one."></td><td>Sequencing Reads  <img class="help-icon" title="Blank field means AMR amplicons not detected,&#10Amplicon name means gene detected, but doesn't have AMR mutations,&#10Mutation description means this mutation was detected in respective amplicon"></td><td>Mapped, correct length  <img class="help-icon" title="Total reads in FASTQ files. If classification is done from BAM files this field will be blank."></td><td>Mapped, but too short/long  <img class="help-icon" title="Reads which mapped to some amplicon and have length that meets -l and -s parameters."></td></tr>
+<tr class=alt_row><td><a href="#barcode1">barcode1<br/>No description</a></td><td>0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0</td><td>-</td><td>-</td><td></td><td>28</td><td>37</td></tr>
+<tr><td><a href="#barcode2">barcode2<br/>No description</a></td><td>0,&nbsp;1,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0</td><td>-</td><td>-</td><td></td><td>393</td><td>156</td></tr>
+	</tbody>
+</table>
+<p>"-" fewer than 2 amplicons with 50 target organism reads and fewer than 2 SNPs</p><p>Classifier allowed soft clip (-s) of 25nt and 10nt length difference (-l) between reference and mapped read.<p>Report generated on 06/Feb/25 at 14:34. <a href="#ModelSignatures">See models list</a></p><br/><br/>
+<div class=header_line><a name="barcode1">barcode1<br/>No description</a><div><a href="#Summary">Back to Summary</a></div></div>
+<br/>
+<table>
+	<tbody>
+<tr class=table_header><td>Amplicon  <img class="help-icon" title="Sample name, you can make it more informative by adding sample description using options -c and -d."></td><td>Tot. Reads  <img class="help-icon" title="Total number of reads that mapped to the amplicon regadless of length (i.e. -s and -l parameters)"></td><td>Rejected on Length  <img class="help-icon" title="Number of mapped reads that were not assesed by classifier due to not meeting -s and -l parameters."></td><td>% Target Org.  <img class="help-icon" title="Percentage of mapped reads that were classified as target organism and that satisfied -s and -l length parameteres"></td><td># Target Org.  <img class="help-icon" title="Number of reads that were classified as target organism and that satisfied -s and -l length parameteres"></td><td>All known SNPs  <img class="help-icon" title="Number of SNPs detected that match known SNPs defined in classifier model file you used.&#10Includes all alleles different from references that occur in >50 reads and no less than 0.05% of all reads"></td><td>Dominant known SNPs  <img class="help-icon" title="Shows those detected SNPs that match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10E.g. if at position 254 the reference is C, but in reads the most common nucleotide is T this would count in this column.&#10If T occcured, but the most common was C, this would not count in this column. "></td><td>Dominant unknown SNPs  <img class="help-icon" title="Shows those detected SNPs that DO NOT match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10E.g. if at position 315 the reference is A, but in reads the most common nucleotide is G this would count in this column.&#10If G occcured, but the most common was A, this would not count in this column. If position has three occuring nucleotides, only the most common is examined."></td><td>Implied Genotypes  <img class="help-icon" title="Genotypes implied by detected SNPs (but not reference alleles). Number in brackets indicates what % of target organism reads supports this genotype.&#10For high level genotypes, a range of possible gnotypes (e.g. 0-2 or 3-4) is reported."></td><td>Implied AMR  <img class="help-icon" title="AMR genotype implied by detected SNPs (but not reference alleles). Number in brackets indicates what % of target organism reads supports this genotype."></td></tr>
+
+<tr class=alt_row><td><a href="#barcode1_tviD_v2_consensus"/>tviD_v2^</td><td>*</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td><a href="#barcode1_gyrA_consensus"/>gyrA</td><td>*</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+	<tbody>
+<table>
+* Amplicon has fewer than 51 target organism reads<br><p>(?) Prediction is based on amplicon with fewer than 50 reads</p>^ Using model that was trained without negative cases - results are likely to be less reliable<br/><br/><br/><br/><br/>
+</div>
+<br/><br/>
+<div class=header_line><a name="barcode2">barcode2<br/>No description</a><div><a href="#Summary">Back to Summary</a></div></div>
+<br/>
+<table>
+	<tbody>
+<tr class=table_header><td>Amplicon  <img class="help-icon" title="Sample name, you can make it more informative by adding sample description using options -c and -d."></td><td>Tot. Reads  <img class="help-icon" title="Total number of reads that mapped to the amplicon regadless of length (i.e. -s and -l parameters)"></td><td>Rejected on Length  <img class="help-icon" title="Number of mapped reads that were not assesed by classifier due to not meeting -s and -l parameters."></td><td>% Target Org.  <img class="help-icon" title="Percentage of mapped reads that were classified as target organism and that satisfied -s and -l length parameteres"></td><td># Target Org.  <img class="help-icon" title="Number of reads that were classified as target organism and that satisfied -s and -l length parameteres"></td><td>All known SNPs  <img class="help-icon" title="Number of SNPs detected that match known SNPs defined in classifier model file you used.&#10Includes all alleles different from references that occur in >50 reads and no less than 0.05% of all reads"></td><td>Dominant known SNPs  <img class="help-icon" title="Shows those detected SNPs that match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10E.g. if at position 254 the reference is C, but in reads the most common nucleotide is T this would count in this column.&#10If T occcured, but the most common was C, this would not count in this column. "></td><td>Dominant unknown SNPs  <img class="help-icon" title="Shows those detected SNPs that DO NOT match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10E.g. if at position 315 the reference is A, but in reads the most common nucleotide is G this would count in this column.&#10If G occcured, but the most common was A, this would not count in this column. If position has three occuring nucleotides, only the most common is examined."></td><td>Implied Genotypes  <img class="help-icon" title="Genotypes implied by detected SNPs (but not reference alleles). Number in brackets indicates what % of target organism reads supports this genotype.&#10For high level genotypes, a range of possible gnotypes (e.g. 0-2 or 3-4) is reported."></td><td>Implied AMR  <img class="help-icon" title="AMR genotype implied by detected SNPs (but not reference alleles). Number in brackets indicates what % of target organism reads supports this genotype."></td></tr>
+
+<tr class=alt_row><td><a href="#barcode2_tviD_v2_consensus"/>tviD_v2^</td><td>*</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td><a href="#barcode2_gyrA_consensus"/>gyrA</td><td>157</td><td>64</td><td>100.00%</td><td>93</td><td>1</td><td>1</td><td>1</td><td></td><td>gyrA_S83T (99%)</td></tr>
+	<tbody>
+<table>
+* Amplicon has fewer than 51 target organism reads<br><p>(?) Prediction is based on amplicon with fewer than 50 reads</p>^ Using model that was trained without negative cases - results are likely to be less reliable<br/><br/><br/><br/><br/>
+</div>
+<div class=header_line>Consensus sequences</div>
+<br/>
+<table>
+	<tbody>
+<tr class=table_header><td>Sample  <img class="help-icon" title="Sample name, you can make it more informative by adding sample description using options -c and -d."></td><td>Amplicon  <img class="help-icon" title="Amplicon name"></td><td># of target reads  <img class="help-icon" title="Number of reads classified as target organism"></td><td>Consensus <br/> Mismatches <br/> vs Reference  <img class="help-icon" title="List of position where most common nucleotide does not match the reference sequence. If allele has known consequence this is also listed.&#10This list usually doesn't match the one in Sample's table because this column only reports cases where most common nucleotide doesn't match reference."></td><td>Consensus sequence  <img class="help-icon" title="Amplicon consensus sequence. If the most common nucleotide is deletion this is reported as '-'. Insertions are not currently supported."></td></tr>
+<tr class=alt_row><td><a name="barcode1_tviD_v2_consensus" href="#barcode1">barcode1<br/>No description</a></td><td>tviD_v2</td><td>1</td><td></td><td>GCAAGCTGCTTAGTGATCGATAAGGTAATCTCACGTATTTGGTCCTGTTTCTCTTGTCGCCCCTCATCAAGATGATGATTAGTATTATTGATCACTCCCTTAAAAATAGCCGCAACGATCGCGTCACCAAACATATCGGTATAATCAGTAAGATCGTCGCCATTTTTTTCCAGGGCTCGTT--TG-CTCCACTTTTCCATCAAATTTGTCGGGTTAACGCAGGGAATATCCATCCTGGCGGCGATGGTGTCGACATTTTTAATCAACCGACTACGGGATAGAATGACGGTTCCAGCACGAGTCACGGCATCAACATGTGTCATAAACATAGCGCGATGGCGCCCAAGAAGCTGAACGATTTCCATCATATCCTGTTCGATAGCATGCTCATCCATCTGCTCGACATTGATATTGCTTAATAAGGCACGATCGTCTTCCGACATTCCGGCAAAACAGGGATCGTCTTTGAGATAGGCCAGCAGTTTGTGTCGATTTCCTTGCGTGGCCAACGACCAGTACATGCACGCCCGCTCTGTTTGGCTAAAAAATTCATAGAAATGACGAGTTAAATAATTTATTTGTAAGCAGAACCCATAGGCCATAATCTTCTTCTGACTTGAAATCTCAATGATATAGAAATCAGAACGACTATGTACGTCGGTGTTTGAATAGTTTACATTAGGTCTAAAAATAAATGGTCAGACCTT---AGGAATGTCTATCAAGCCCAAAATAAACCGAATCTGCTGTAATGCCTCGCTGCTCGTATGCGTAAAACCATATATTCTCTTAAAGTTTGCCTGAAAATTAAAATAAGGC</td></tr>
+<tr><td><a name="barcode1_gyrA_consensus" href="#barcode1">barcode1<br/>No description</a></td><td>gyrA</td><td>0</td><td></td><td></td></tr>
+<tr class=alt_row><td><a name="barcode2_tviD_v2_consensus" href="#barcode2">barcode2<br/>No description</a></td><td>tviD_v2</td><td>44</td><td></td><td>GCAAGCTGCTTAGTGATCGATAAGGTAATCTCACGTATTTGGTCCTGTTTCTCTTGTCGCCCCTCATCAAGATGATGATTAGTATTATTGATCACTCCCTTAAAAATAGCCGCAACGATCGCGTCACCAAACATATCGGTATAATGAGTAAGATCGTCGCCATTTTTTTCCAGGGCTCGTTTCTGCCCCCACTTTTCCATCAAATTTGTCGGGTTAACGCAGGGAATATCCATCCTGGCGGCGATGGTGTCGACATTTTTAATCAACCGACTACGGGATAGAATGACGGTTCCAGCACGAGTCACGGCATCAACATGTGTCATAAACATAACGCGATCGCGACCAAGAAGCTGAACGATTTCCATCATATCCTGTTCGATAGCATGCTCATCCATCTGCTCGACATTGATATTGCTTAATAAGGCACGATTGTCTTCCGACATTCCGGCAAAACAGGGATCGTCTTTGAGATAGGCCAGCAGTTTGTGTCGATTTCCTTGCGTGGCCAACGACCAGTACATGCACGCCCGCTCTGTTTGGCTAAAAAATTCATAGAAATGACGAGTTAAATAATTTATTTGTAAGCAGAACCCATAGGCCATAATCTTCTTCTGACTTGAAATCTCAATGATATAGAAATCAGAACGACTATGTACGTCGGTGTTTGAATAGTTTACATTAGGTCTAAAAATAAATGGTCGGACCTTTTCAGGAATGTCTATCAAGCCCAAAATAAACCGAATCTGCTGTAATGCCTCGCTGCTCGTATGCGTAAAACCATATATTCTCTTAAAGTTTGCCTGAAAATTAAAATAAGGC</td></tr>
+<tr><td><a name="barcode2_gyrA_consensus" href="#barcode2">barcode2<br/>No description</a></td><td>gyrA</td><td>93</td><td>Pos:320 (97%) , Change:C>T, Implication: Unknown<br/>Pos:1684 (99%) , Change:G>T, Implication: gyrA_S83T</td><td>GACGCCTTCTTCGTACTCACGAACCGGCAGAATCGCGGTGATACGTTCGTTGGCTTCCAGCGGCAGCAGGTTAACGATCGGACGACCGCGCGCGCCACGGCTGGCTTCCGGCAACTGATAGACCTTCATCCAGTACAGACGGCCCCGGCTGGAGAAGCAAAGGATGGTGTCATGGGTGTTGGCCACCAGCAGGCGGTCGATAAAGTCTTCTTCTTTAATACGTGCTGCTGATTTGCCTTTACCGCCACGACGCTGTGCTTCGTAATCGGTTAACGGCTGATATTTCACATAGCCCTGATGAGACAAGGTTACGACAACATTTTCCTGGCTAATCAGATCTTCGATATTAATATCGGCGCTGTTGGCGGTGATTTCGGTACGACGCTCATCGCCGAACTGATCGCGAATTAACTCCATCTCTTCGCGGATCACTTCCATCAGGCGATCGGCGCTGCCCAGAATGTGCAGCAGTTCAGCGATCTGCTCCAGCAACTCTTTGTATTCGTCGAGCAGTTTTTCATGCTCCAGGCCGGTCAGTTTCTGCAAACGCAGATCCAGAATCGCCTGCGCCTGCTGTTCAGTCAGGTAGTATTGACCGTCACGCACGCCAAATTCTGGCTCCAGCCATTCCGGACGCGCGGCGTCGTCACCGGCGCGCTCCAGCATCGCAGCAACGTTGCCCAGATCCCACGGACGCGAAATCAGCGCCGCTTTCGCTTCCGCCGGCGTCGGCGCGCGGCGAATCAGTTCGATAATCGGGTCGATGTTGGCCAGCGCAATCGCCAGAGCTTCAAGGATATGCGCACGATCACGGGCTTTACGCAGTTCAAAAATAGTCCGACGCGTCACCACTTCACGGCGGTGGCGCACGAACGCTGAAATAATATCTTTCAGGTTCATGATCTTCGGCTGGCCGTGATGCAGCGCCACCATGTTAATACCGAAGGAAACCTGTAGCTGGGTCTGGGAGTAGAGATTATTAAGCACCACCTCGCCCACCGCATCGCGTTTCACTTCAATCACGATGCGCATCCCGTCTTTGTCGGATTCGTCACGCAGCGCGCTGATGCCTTCCACGCGTTTATCTTTCACCAGCTCGGCGATTTTCTCGATCAGGCGCGCTTTGTTCACCTGATAGGGAATTTCATGGACGATGATGGTTTCACGGCCCGTTTTCGCGTCAGCTTCAACTTCCGCGCGGGCGCGAATGTACACTTTGCCACGACCGGTACGGTAGGCTTCTTCGATACCACGACGACCGTTGATGATCGCGGCGGTCGGGAAGTCCGGACCCGGAATATGTTCCATCAGCCCTTCAATGCTGATGTCTTCGTTGTCGATATACGCCAGGCAGCCGTTAATCACTTCCGTCAGGTTGTGCGGCGGGATATTCGTCGCCATACCTACTGCGATACCGGAAGAACCGTTCACCAGCAGATTCGGAATTTTGGTCGGCATGACGTCCGGAATTTTTTCCGTACCGTCATAGTTATCCACGAAATCCACCGTCTCTTTTTCGAGATCGGCCATCAGTCCGTGGGCGATTTTCGCCAGACGGATCTCCGTATAACGCATTGCCGCCGCGGAGTCGCCGTCAATAGAACCGAAGTTACCCTGACCATCCACCAGCATGTAACGCAGCGAGAATGGCTGCGCCATACGAACGATGGTGTCATACACTGCGTAATCGCCGTGGGGATGGTATTTACCGATTACGTCACCAACGACACGGGCAGATTTTTTATAGGCTTTGTTCCAGTCATTGCCCAATACGTTCATGGCGTAAAGTACGCGACGGTGTACCGGCTTCAGGCCATCTCGGACATCCGGCAGCGCACGGCCAACAATGACAGACATCGCATAATCCAGATAGGAGCTCTTCAGCTCTTCCTCAATGTTGACCGGTGTAATTTCTCTCGCAAGGTCGCTCATCTAACCGCTATCCCTCTACTGTATCCCGGATTCAAAGGTCGCAAATTATAACACATTCGCCCACGTACTGGTAAACGGAATGCAGCCAGACAATGCTTTATTCGGGTGCCACATGCTCTCTTCATTTATAAGCGTGGTCTCGGCGTTTATCGGCGATCAGCTTCA</td></tr>
+	</tbody>
+</table>
+</div>
+<div class=header_line><a name="ModelSignatures">Model Signatures</a><div><a href="#Summary">Back to Summary</a></div></div>
+<br/>
+<table>
+	<tbody>
+<tr class=table_header><td>Amplicon</td><td>Is Core</td><td>Signature</td><td>Date Trained</td></tr>
+		<tr class=alt_row><td>gyrA</td><td>True</td><td>3474e65b-af3b-40d5-95f6-fd57dca4bcfe</td><td>06/Feb/25 at 14:33</td></tr>
+		<tr><td>tviD_v2</td><td>True</td><td>18f8c601-2e11-4aa7-b946-2913bb1e0f3b</td><td>06/Feb/25 at 14:33</td></tr>
+<table>
+	<tbody>
+</div>
+</body>
+</html>
