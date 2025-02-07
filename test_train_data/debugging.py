@@ -186,6 +186,7 @@ def read_bam(target_regions: List[Amplicon]) -> None:
         write_log("pysam indicates "+str(alignment_matrix.shape[0])+" reads in this "+bam_file+ " for amplicon "+target_amplicon.name+\
         " of these  "+str(_wrong_len_reads[target_amplicon.name])+" were rejected due to lengths")
         _read_matrices[target_amplicon.name]=alignment_matrix[used_rows]
+    return _read_matrices
 
 write_log("using pysam version " + ps.__version__)
 bed_file=expanduser("./amplicons.bed")
@@ -202,5 +203,7 @@ bams=['./positive_bams/ERR13868196.bam', './positive_bams/ERR13868190.bam', './p
 for bam in bams:
     write_log("reading bam "+bam)
     bam_file=expanduser(bam)
-    read_bam(target_regions)
+    results=read_bam(target_regions)
+    for item, matrix in results.items():
+        write_log("read_bam returned "+str(matrix.shape)+" matrix for amplicon "+item )
 log.close()
