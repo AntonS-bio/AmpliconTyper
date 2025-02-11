@@ -67,6 +67,7 @@ class ModelManager:
         self._target_regions.clear()
         self._target_regions=[f for f in target_regions]
         self._train_classifier(matrices_file)
+
 #region Properties
     @property
     def excluded_samples(self) -> Set[str]:
@@ -201,11 +202,6 @@ class ModelManager:
         with open(self.model_evaluation_file,"w") as temp:
             for name, model in self.trained_models.items():
                 temp.write(name+"\t"+str(model.sensitivity)+"\t"+str(model.specificity)+"\n")
-                # if model.not_trained:
-                #     temp.write(f'{name}\tNot Trained\tNot Trained' )
-                # else:
-                #     temp.write(",".join([ key+": "+str(count) for key, count in model.misclassified_inputs.items()]) )
-                # temp.write("\n")
 
         output = ModelsData()
         output.classifiers=self.trained_models

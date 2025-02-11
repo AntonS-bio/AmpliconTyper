@@ -2,6 +2,8 @@ import argparse
 import subprocess
 from typing import List, Dict
 import pickle
+from sys import exc_info
+import traceback
 from os.path import  expanduser, join, exists, basename
 from os import mkdir
 from shutil import which, rmtree
@@ -218,7 +220,11 @@ async def run():
         print("\n"+checker.result)
 
     except Exception as e:
-       print(e)
+        exc_type, exc_obj, exc_tb = exc_info()
+        lf = traceback.extract_tb(exc_tb)[-1]
+        print("Program terminated with an error:")
+        print("File: ", lf.filename,", Line: ", lf.lineno)
+        print(e)
     if exists(temp_dir): #clean up
         rmtree(temp_dir)
 

@@ -1,4 +1,6 @@
 from os.path import expanduser
+import traceback
+from sys import exc_info
 import argparse
 from typing import List
 from inputs_validation import ValidateFiles
@@ -96,4 +98,12 @@ def main():
 
 
 if __name__=="__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = exc_info()
+        lf = traceback.extract_tb(exc_tb)[-1]
+        print("Program terminated with an error:")
+        print("File: ", lf.filename,", Line: ", lf.lineno)
+        print(e)
+    
