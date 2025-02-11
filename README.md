@@ -11,6 +11,9 @@ This tool, AmpliconTyper, has two modes:
 
 
 ## Setup
+
+### Warning - for some Mac users the tool won't work.
+
 The easiest way to setup the tool is to use conda or mamba. If you are using macOS or Linux, you can install via command line. If you are using Windows 10+, the best option is to setup Windows Subsystem Linux (WSL) first which will give you access to Linux functionality from you Windows system. After that, you can use conda or mamba.
 
 The best practice is to install packages in dedicated environment to avoid software conflicts. To create new environment and install AmpliconTyper into it use:
