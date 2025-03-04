@@ -1,14 +1,14 @@
-import argparse
-import subprocess
+from argparse import ArgumentParser
+from subprocess import run, PIPE
 from typing import List, Dict
-import pickle
+from pickle import load
 from sys import exc_info
-import traceback
+from traceback import extract_tb
 from os.path import  expanduser, join, exists, basename
 from os import mkdir
 from shutil import which, rmtree
-import uuid
-import asyncio
+from uuid import uuid4
+from asyncio import gather, get_event_loop
 from check_for_update import UpdateChecker
 from data_classes import Amplicon
 from input_processing import InputProcessing
@@ -20,12 +20,12 @@ warnings.filterwarnings("ignore")
 from map import ReadMapper
 import pysam as ps
 
-VERSION="0.1.28"
+VERSION="0.1.29"
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
     target_regions: List[Amplicon] = []
     with open(model_file, "rb") as input_model:
-        models_data: ModelsData = pickle.load(input_model)
+        models_data: ModelsData = load(input_model)
         model_manager: Dict[str, Classifier] = models_data.classifiers
     for name, model in model_manager.items():
         bed_line=f'{model.name}\t0\t{len(model.nucletoide_seq)}\t{model.name}'
@@ -42,7 +42,7 @@ def generate_ref_fasta(model_file: str, ref_file: str) -> None:
     :type models_file: str
     """
     with open(model_file, "rb") as input_model:
-        models_data: ModelsData = pickle.load(input_model)
+        models_data: ModelsData = load(input_model)
         model_manager: Dict[str, Classifier] = models_data.classifiers
     with open(ref_file, "w" ) as ref_output:
         for name, model in model_manager.items():
@@ -72,10 +72,10 @@ def get_postive_reads(results: List[ClassificationResult], target_reads_bams: st
             if read.query_name in ids:
                 target_reads_bam.write(read)
         target_reads_bam.close()
-        subprocess.run(f'samtools index {output_file} {output_file+".bai"}', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+        run(f'samtools index {output_file} {output_file+".bai"}', shell=True, executable="/bin/bash", stdout=PIPE,  stderr=PIPE)
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description='Classify reads in BAM file using existing model or train a model from bam files')
+    parser = ArgumentParser(description='Classify reads in BAM file using existing model or train a model from bam files')
     parser.add_argument('-f','--fastqs', type=str,
                         help='Directory with ONT run results or individual FASTQ file', required=False)
     parser.add_argument('-b','--bams',  type=str,
@@ -94,9 +94,9 @@ def get_arguments():
     parser.add_argument('--target_reads_bams', type=str,
                         help='Directory to which to write reads classified as target organism. Using this will substantially increase run time.', required=False)
     parser.add_argument('-s', '--max_soft_clip', type=int,
-                        help='Specifies maximum permitted soft-clip (length of read before first and last mapped bases) of mapped read', required=False, default=25)
+                        help='Specifies maximum permitted soft-clip (length of read before first and last mapped bases) of mapped read', required=False, default=10000)
     parser.add_argument('-l', '--max_read_len_diff', type=int,
-                        help='Specifies maximum nucleotide difference between mapped portion of read and target amplicon', required=False, default=10)
+                        help='Specifies maximum nucleotide difference between mapped portion of read and target amplicon', required=False, default=20)
     parser.add_argument('--organism_presence_cutoff', type=float,
                         help='Currently not in use', required=False, default=20.0)
    
@@ -211,17 +211,17 @@ async def classify(temp_dir, args):
     print("Done")
     
 async def run():
-    temp_dir=expanduser( join("./",str(uuid.uuid4())) )
+    temp_dir=expanduser( join("./",str(uuid4())) )
 
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
-        await asyncio.gather(checker.get_result(VERSION), classify(temp_dir, input_arguments))
+        await gather(checker.get_result(VERSION), classify(temp_dir, input_arguments))
         print("\n"+checker.result)
 
     except Exception as e:
         exc_type, exc_obj, exc_tb = exc_info()
-        lf = traceback.extract_tb(exc_tb)[-1]
+        lf = extract_tb(exc_tb)[-1]
         print("Program terminated with an error:")
         print("File: ", lf.filename,", Line: ", lf.lineno)
         print(e)
@@ -232,5 +232,5 @@ def main():
     pass
 
 if __name__=="classify" or __name__=="__main__":
-    loop = asyncio.get_event_loop()
+    loop = get_event_loop()
     loop.run_until_complete(run())

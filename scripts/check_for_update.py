@@ -82,6 +82,7 @@ class UpdateChecker:
             shell_stdout = subprocess.run(f'conda list | grep amplicontyper', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
             if shell_stdout.returncode!=0:
                 self._result+="Error using conda to check the currently installed version of AmpliconTyper"+"\n"
+                self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
                 return False
             shell_stdout = shell_stdout.stdout.decode()
             lines=shell_stdout.strip().split("\n")
@@ -96,8 +97,10 @@ class UpdateChecker:
                     return True
                 else:
                     self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines[0]}'+"\n"
+                    self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
             else:
-                self._result+='Could not deteremine determine the AmpliconTyper version using conda: {lines}'+"\n"
+                self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines}'+"\n"
+                self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
         except Exception as e:
             self._result+="Couldn't get current version of installed tool."+"\n"
             self._result+=str(e)
