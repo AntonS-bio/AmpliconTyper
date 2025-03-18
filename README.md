@@ -98,9 +98,9 @@ This will classify all BAMs in directory ./bams/
 ```
 classify -b ./bams/ -m model.pkl -d metadata.tsv -c Description -o report.html
 ```
-This will only classify sample_1.bam
+This will only classify barcode1.bam
 ```
-classify -b ./bams/sample_1.bam -m model.pkl -d metadata.tsv -c Description -o report.html
+classify -b ./bams/barcode1.bam -m model.pkl -d metadata.tsv -c Description -o report.html
 ```
 
 
