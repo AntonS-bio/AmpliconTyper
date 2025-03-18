@@ -8,7 +8,8 @@ This tool, AmpliconTyper, has two modes:
     1. Train a classification model using existing Nanopore data - this can be your own data, data from genomic repositories (ENA, NCBI, DDBJ) or a mix of these
     2. Classify ONT sequencing data using the model trained in (1)
 
-
+## Citing
+If you used the tool and found it useful, please cite "AmpliconTyper – tool for analysing ONT multiplex PCR data from environmental and other complex sources" [10.1101/2025.01.30.635642](https://doi.org/10.1101/2025.01.30.635642)
 
 ## Setup
 
