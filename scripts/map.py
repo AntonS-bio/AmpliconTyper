@@ -136,10 +136,7 @@ class ReadMapper:
         :rtype: Tuple(int,int)
         """
         result=MappingResult(output_name)
-        with gzip.open(fastq, 'rb') as f:
-            for line in f:
-                result.total_reads += 1
-
+        result.total_reads = sum(1 for f in gzip.open(fastq, 'rb')) / 4
         subprocess.run(f'minimap2 -ax map-ont {self.reference} {fastq} | samtools view -@ {self._cpus} -F 2308 -bS  | samtools sort -@ {self._cpus} -o {output_name}', \
                 shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
         # 2308=256(not primary) + 4(not aligned)+2064(not supplementary alignment)
