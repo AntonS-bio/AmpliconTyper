@@ -134,7 +134,7 @@ Normally, you'd need to merge the the files from each barcode before mapping, bu
 
 **IMPORTANT if AmpliconTyper is doing the mapping, it will call each output BAM by the name with corresponding barcode (ex. barcode2.bam), this may overwrite some old BAMs**
 
-Neither the metadata file (-d), nor genotypes hierarchy (-g) are required, but you probably already have them and they substantially enrich the classification report, so it's worth using them. The metadata file is simply a delimited file that lists the samples in the first column, the genotypes hierarchy file was likely used when your PCR primers were generated. 
+The metadata file (-d) is not required, but you probably already have this file and it substantially enriches the classification report, so it's worth. The metadata file is simply a delimited file that lists the samples in the first column. 
 
 ```
 usage: classify -b  -m  -o  [-d] [-c] [--column_separator] [-g] [--cpu] [-h]
