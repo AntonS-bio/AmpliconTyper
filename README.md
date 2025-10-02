@@ -15,15 +15,15 @@ If you used the tool and found it useful, please cite "AmpliconTyper – tool fo
 
 ### Warning - for some Mac users the tool won't work.
 
-The easiest way to setup the tool is to use conda or mamba. If you are using macOS or Linux, you can install via command line. If you are using Windows 10+, the best option is to setup Windows Subsystem Linux (WSL) first which will give you access to Linux functionality from you Windows system. After that, you can use conda or mamba.
+The easiest way to setup the tool is to use conda or mamba. If you are using macOS or Linux, you can install via command line. If you are using Windows 10+, the best option is to setup Windows Subsystem Linux (WSL) first which will give you access to Linux functionality from you Windows system. After that, you can use mamba or conda.
 
 The best practice is to install packages in dedicated environment to avoid software conflicts. To create new environment and install AmpliconTyper into it use:
 ```
-conda create --name  amplicontyperENV -c bioconda -c conda-forge amplicontyper
+mamba create --name  amplicontyperENV -c bioconda amplicontyper
 ```
 Once installed, use
 ```
-conda activate amplicontyperENV
+mamba activate amplicontyperENV
 ```
 to activate the environment. Now you are ready to use the AmpliconTyper. You would need to run activation command (but not create command) every time you start a new terminal. In both commands above "amplicontyperENV" can be replaced with whatever you want to call the environment. 
 
