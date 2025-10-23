@@ -9,7 +9,7 @@ This tool, AmpliconTyper, has two modes:
     2. Classify ONT sequencing data using the model trained in (1)
 
 ## Citing
-If you used the tool and found it useful, please cite "AmpliconTyper – tool for analysing ONT multiplex PCR data from environmental and other complex sources" [10.1101/2025.01.30.635642](https://doi.org/10.1101/2025.01.30.635642)
+If you used the tool and found it useful, please cite "AmpliconTyper – tool for analysing ONT multiplex PCR data from environmental and other complex sources" [10.1101/2025.01.30.635642](https://doi.org/10.1099/mgen.0.001421)
 
 ## Setup
 
