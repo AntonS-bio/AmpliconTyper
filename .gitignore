@@ -21,6 +21,11 @@ bams_matrix.pkl
 murium.tsv
 DELETE*
 manuscript_data/
+pbsimm_data/
+nanosim/
+seq2squiggle/
+gyrA_v2_train/
+naive_simulator/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

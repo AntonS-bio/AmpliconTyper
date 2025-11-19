@@ -42,7 +42,6 @@ def main():
     input_processing=InputProcessing()
     if args.bams_matrix is None:
         positive_bams=input_processing.get_bam_files( args.positive_bams )
-        print(positive_bams)
         negative_bams=input_processing.get_bam_files( args.negative_bams )
         if len(positive_bams)==0 or len(negative_bams)==0:
             exit()
@@ -80,20 +79,24 @@ def main():
     file_validator.contigs_in_fasta(bed_file, fasta_file )
 
     target_regions: List[Amplicon] = []
+    target_coordinate_in_amplicons={}
     with open(bed_file) as input_file:
         for line in input_file:
             target_regions.append(Amplicon.from_bed_line(line, fasta_file))
+            start, end=[int(f) for f in line.split("\t")[1:3]] 
+            #this is needed in cases where .bed coordinates are not the whole supplied reference sequence
+            target_coordinate_in_amplicons[target_regions[-1].name]=(start,end)
 
 
     model_manager=ModelManager(model_file, cpu_to_use)
     model_manager.model_evaluation_file=model_quality_file
     model_manager.load_genotype_snps(vcf_file)
-    ReadsMatrix.permitted_read_soft_clip=2000
-    ReadsMatrix.permitted_mapped_sequence_len_mismatch=5
+    ReadsMatrix.permitted_read_soft_clip=5000
+    ReadsMatrix.permitted_mapped_sequence_len_mismatch=1100
     if use_existing_bams_matrix:
-        model_manager.train_from_existing_matrices(target_regions=target_regions, matrices_file=matrix_file)
+        model_manager.train_from_existing_matrices(target_regions=target_regions, matrices_file=matrix_file, coord_in_amplicon=target_coordinate_in_amplicons)
     else:
-        model_manager.train_from_bams(target_regions, positive_bams, negative_bams, matrix_file)
+        model_manager.train_from_bams(target_regions, positive_bams, negative_bams, matrix_file, coord_in_amplicon=target_coordinate_in_amplicons)
 
 
 

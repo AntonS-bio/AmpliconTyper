@@ -86,8 +86,10 @@ class UpdateChecker:
                 return False
             shell_stdout = shell_stdout.stdout.decode()
             lines=shell_stdout.strip().split("\n")
+            lines=[f for f in lines if f[0]!="#"]
             if len(lines)==1:
                 values=[f for f in lines[0].split(" ") if f]
+                #print(values)
                 if values[0]=="amplicontyper" and len(values)>1:
                     self._tool_current_version=values[1]
                     if self._tool_current_version!=self._running_version:

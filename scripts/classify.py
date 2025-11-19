@@ -4,7 +4,7 @@ from typing import List, Dict
 from pickle import load
 from sys import exc_info
 from traceback import extract_tb
-from os.path import  expanduser, join, exists, basename
+from os.path import  expanduser, join, exists, basename, splitext
 from os import mkdir
 from shutil import which, rmtree
 from uuid import uuid4
@@ -100,7 +100,7 @@ def get_arguments():
     parser.add_argument('--organism_presence_cutoff', type=float,
                         help='Currently not in use', required=False, default=20.0)
    
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s '+VERSION)
+    parser.add_argument('-v', '--version', help=f'Current version is {VERSION}', action='version', version='%(prog)s '+VERSION)
 
     try:
         args = parser.parse_args()
@@ -134,6 +134,13 @@ async def classify(temp_dir, args):
     if not exists(model_file):
         print(f'Could not located model file {model_file}. Exiting.')
         return
+
+    output_file=input_processing.check_output_dir(args.output_file)
+    output_filename, output_file_extension = splitext(output_file)
+    if output_file_extension!=".html":
+        print(f'Output file {args.output_file} should end with .html, not {output_file_extension}' )
+        return
+
 
     fasta_file = join(temp_dir,"reference.fasta")
     generate_ref_fasta(model_file, fasta_file)
@@ -189,8 +196,6 @@ async def classify(temp_dir, args):
         return
     
 
-    output_file=input_processing.check_output_dir(args.output_file)
-
     target_regions: List[Amplicon] = generate_amplicons(model_file, fasta_file)
 
     model_manager=ModelManager(model_file, cpu_to_use)
@@ -210,7 +215,7 @@ async def classify(temp_dir, args):
     rmtree(temp_dir)
     print("Done")
     
-async def run():
+async def check_for_updates():
     temp_dir=expanduser( join("./",str(uuid4())) )
 
     try:
@@ -233,4 +238,4 @@ def main():
 
 if __name__=="classify" or __name__=="__main__":
     loop = get_event_loop()
-    loop.run_until_complete(run())
+    loop.run_until_complete(check_for_updates())

@@ -1,7 +1,7 @@
 from collections import Counter
 from os.path import exists, basename, dirname, isdir
 from multiprocessing import Pool
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 import pickle
 from tqdm import tqdm
 import numpy as np
@@ -27,7 +27,8 @@ class ModelManager:
         self._genotype_snps:List[GenotypeSNP]=[]
         self._model_evaluation_file=""
 
-    def train_from_bams(self, target_regions: List[Amplicon], positive_bams: List[str], negative_bams: List[str], matrices_output_file:str) -> None:
+    def train_from_bams(self, target_regions: List[Amplicon], positive_bams: List[str],
+                         negative_bams: List[str], matrices_output_file:str, coord_in_amplicon: Dict[str, Tuple[int,int]]) -> None:
         """Creates nucleotides matrix from bams
         and trains model to differentiate reads from positive and negative bams
 
@@ -39,11 +40,14 @@ class ModelManager:
         :type negative_bams: List[str]
         :param matrices_output_file: File where matrices would be pickled
         :type matrices_output_file: str
+        :param coord_in_amplicon: Contains start and end of each amplicon on the reference sequence which is used to get a subset of the reads matrix
+        :type coord_in_amplicon: Dict[str, Tuple(int,int)]     
         """
         if not isdir(dirname(matrices_output_file)):
             raise ValueError(f'Terminating model training, directory {dirname(matrices_output_file)} does not exist')
         self._target_regions.clear()
         self._target_regions=[f for f in target_regions]
+        self._coord_in_amplicon=coord_in_amplicon
         self._matrices_file=matrices_output_file
         ReadsMatrix.train_mode=True
         postive_matrix=self._bams_to_matrix(positive_bams)
@@ -55,7 +59,7 @@ class ModelManager:
             del negative_matrix
         self._train_classifier(matrices_output_file)
 
-    def train_from_existing_matrices(self, target_regions: List[Amplicon], matrices_file: str) -> None:
+    def train_from_existing_matrices(self, target_regions: List[Amplicon], matrices_file: str, coord_in_amplicon: Dict[str, Tuple[int,int]]) -> None:
         """Creates nucleotides matrix from existing nucleotide matrices
         and trains model to differentiate reads from positive and negative matrices
 
@@ -63,9 +67,13 @@ class ModelManager:
         :type target_regions: List[Amplicon]
         :param matrices_file: Pickle file containing pickled matrices
         :type matrices_file: str
+        :param coord_in_amplicon: Contains start and end of each amplicon on the reference sequence which is used to get a subset of the reads matrix
+        :type coord_in_amplicon: Dict[str, Tuple(int,int)]     
+
         """
         self._target_regions.clear()
         self._target_regions=[f for f in target_regions]
+        self._coord_in_amplicon=coord_in_amplicon
         self._train_classifier(matrices_file)
 
 #region Properties
@@ -182,9 +190,11 @@ class ModelManager:
                     raw_data["negative"].pop(file)
             negative_data=np.vstack( [ values[target.name] for key, values in raw_data["negative"].items() ] )
             negative_data_bams=np.vstack( [ np.asarray([key]*values[target.name].shape[0]).reshape(-1,1) for key, values in raw_data["negative"].items() ] )
-
+            #Sometimes the training is done for a subset of mapped reference sequence (e.g. when doing extra primer testing)
+            bam_start, bam_end = self._coord_in_amplicon[target.name ]
+            #negative_data=negative_data[:,bam_start:bam_end]
             positive_data=np.vstack( [ values[target.name] for key, values in raw_data["positive"].items()] )
-
+            #positive_data=positive_data[:,bam_start:bam_end]
             #check that the nucleotides in the VCF with SNP and nucleotides in the positive matrix match
 
             print(f'Positive data shape: {positive_data.shape[0]} rows and {positive_data.shape[1]} columns')
@@ -221,7 +231,8 @@ class ModelManager:
         :return List of matrix positions to exclude
         :rtype: List[int]
         """
-        columns_to_exclude=[f.position for f in self._genotype_snps if f.contig_id==ref_contig]
+        columns_to_exclude=[f.position-self._coord_in_amplicon[ref_contig ][0] for f in self._genotype_snps if f.contig_id==ref_contig if
+                             f.position>=self._coord_in_amplicon[ref_contig ][0] and f.position<=self._coord_in_amplicon[ref_contig ][1]]
         if len(columns_to_exclude)>0:
             postive_matrix_nucleotides=np.apply_along_axis(lambda x: Counter(x).most_common(1)[0], 0, positive_data[:,columns_to_exclude])[0]
             postive_matrix_nucleotides=[number_dic[f] for f in postive_matrix_nucleotides]
@@ -242,6 +253,8 @@ class ModelManager:
         :rtype: ReadsMatrix
         """
         reads_matrix=ReadsMatrix(bam_file=bam_file, is_positive=False)
+        if bam_file=="/home/lshas17/AmpliconData/bams_typhi/ct18.bam":
+            a=1
         reads_matrix.read_bam(self._target_regions)
         return reads_matrix
 
@@ -258,7 +271,6 @@ class ModelManager:
         """
 
         if __name__ == 'model_manager':
-            print(self.cpus_to_use)
             with Pool(self.cpus_to_use) as p:
                 msa_results = list(tqdm( p.imap(func=self._process_bams, iterable=bam_files), total=len(bam_files) ))
                 bam_matrices:Dict[str, Dict[str,np.array]]=dict( (basename(f.bam_file), f.read_matrices) for f in msa_results  )

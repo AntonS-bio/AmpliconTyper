@@ -326,18 +326,6 @@ class ClassificationResult:
         self._consensus_frequency=value
 
 
-    @property
-    def has_mismatches(self) -> bool:
-        if self._consensus=="":
-            raise ValueError("No consensus sequence, check if mismatches were calculated")
-        elif self.num_mismatches==0:
-            return False
-        else:
-            return True
-    @property
-    def num_mismatches(self) -> int:
-        return len(self.mismatches)
-
     
     #endRegion
 
@@ -402,7 +390,6 @@ class Classifier:
         :rtype: (np.array, np.array)
         """        
         binarised_matrix=self._nucleotide_to_binary_matrix(matrix)
-
         sample_train, sample_test = train_test_split( range(0, binarised_matrix.shape[0] ),
                                                 train_size=n_train, test_size=n_test    )
 
@@ -486,10 +473,10 @@ class Classifier:
             self.not_trained=False
             print("Generating training")
             train_data, train_true,  test_data, test_true = self.generate_test_train_sets(positive_data[:,used_columns], negative_data[:,used_columns],
-                                                                                                            min(int(positive_data.shape[0]*0.8), 5000),
-                                                                                                            min(int(negative_data.shape[0]*0.8), 5000),
-                                                                                                            min(int(positive_data.shape[0]*0.2), 5000),
-                                                                                                            min(int(negative_data.shape[0]*0.2), 5000), negative_data_bams )
+                                                                                                            min(int(positive_data.shape[0]*0.9), 15000),
+                                                                                                            min(int(negative_data.shape[0]*0.9), 15000),
+                                                                                                            min(int(positive_data.shape[0]*0.1), 15000),
+                                                                                                            min(int(negative_data.shape[0]*0.1), 15000), negative_data_bams )
             del positive_data
             del negative_data
             self._train_with_negative(train_data, train_true)
