@@ -9,21 +9,21 @@ This tool, AmpliconTyper, has two modes:
     2. Classify ONT sequencing data using the model trained in (1)
 
 ## Citing
-If you used the tool and found it useful, please cite "AmpliconTyper – tool for analysing ONT multiplex PCR data from environmental and other complex sources" [10.1101/2025.01.30.635642](https://doi.org/10.1101/2025.01.30.635642)
+If you used the tool and found it useful, please cite "AmpliconTyper – tool for analysing ONT multiplex PCR data from environmental and other complex sources" [10.1101/2025.01.30.635642](https://doi.org/10.1099/mgen.0.001421)
 
 ## Setup
 
 ### Warning - for some Mac users the tool won't work.
 
-The easiest way to setup the tool is to use conda or mamba. If you are using macOS or Linux, you can install via command line. If you are using Windows 10+, the best option is to setup Windows Subsystem Linux (WSL) first which will give you access to Linux functionality from you Windows system. After that, you can use conda or mamba.
+The easiest way to setup the tool is to use conda or mamba. If you are using macOS or Linux, you can install via command line. If you are using Windows 10+, the best option is to setup Windows Subsystem Linux (WSL) first which will give you access to Linux functionality from you Windows system. After that, you can use mamba or conda.
 
 The best practice is to install packages in dedicated environment to avoid software conflicts. To create new environment and install AmpliconTyper into it use:
 ```
-conda create --name  amplicontyperENV -c bioconda -c conda-forge amplicontyper
+mamba create --name  amplicontyperENV -c bioconda amplicontyper
 ```
 Once installed, use
 ```
-conda activate amplicontyperENV
+mamba activate amplicontyperENV
 ```
 to activate the environment. Now you are ready to use the AmpliconTyper. You would need to run activation command (but not create command) every time you start a new terminal. In both commands above "amplicontyperENV" can be replaced with whatever you want to call the environment. 
 
@@ -98,9 +98,9 @@ This will classify all BAMs in directory ./bams/
 ```
 classify -b ./bams/ -m model.pkl -d metadata.tsv -c Description -o report.html
 ```
-This will only classify sample_1.bam
+This will only classify barcode1.bam
 ```
-classify -b ./bams/sample_1.bam -m model.pkl -d metadata.tsv -c Description -o report.html
+classify -b ./bams/barcode1.bam -m model.pkl -d metadata.tsv -c Description -o report.html
 ```
 
 
@@ -134,7 +134,7 @@ Normally, you'd need to merge the the files from each barcode before mapping, bu
 
 **IMPORTANT if AmpliconTyper is doing the mapping, it will call each output BAM by the name with corresponding barcode (ex. barcode2.bam), this may overwrite some old BAMs**
 
-Neither the metadata file (-d), nor genotypes hierarchy (-g) are required, but you probably already have them and they substantially enrich the classification report, so it's worth using them. The metadata file is simply a delimited file that lists the samples in the first column, the genotypes hierarchy file was likely used when your PCR primers were generated. 
+The metadata file (-d) is not required, but you probably already have this file and it substantially enriches the classification report, so it's worth. The metadata file is simply a delimited file that lists the samples in the first column. 
 
 ```
 usage: classify -b  -m  -o  [-d] [-c] [--column_separator] [-g] [--cpu] [-h]
