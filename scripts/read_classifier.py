@@ -43,6 +43,15 @@ class GenotypeSNP:
         self._is_amr=is_amr
 
     @property
+    def reporting_threshold(self) -> float:
+        return self._reporting_threshold
+
+    @reporting_threshold.setter
+    def reporting_threshold(self, value: float):
+        self._reporting_threshold=value
+
+
+    @property
     def contig_id(self) -> str:
         return self._contig_id
 
@@ -202,12 +211,21 @@ class ReadsMatrix:
                         self._wrong_len_reads[target_amplicon.name]+=1
                         continue #This will skip non-full length queries
                     orientation.append(read.is_forward)
-                    query_nt = [ read_ref_pair[0] for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
-                                    read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
-                    ref_nt = [ read_ref_pair[1]-target_start for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
-                                read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
-                    bases=set([ read.query_sequence[f] for f in query_nt])
-                    if True in [f not in base_dic for f in bases]:
+                    
+                    aligned_pairs = read.get_aligned_pairs()
+                    valid_pairs = [(qpos, rpos-target_start) for qpos, rpos in aligned_pairs
+                        if rpos is not None and target_start <= rpos < target_end and qpos is not None]
+                    # query_nt = [ read_ref_pair[0] for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
+                    #                 read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
+                    # ref_nt = [ read_ref_pair[1]-target_start for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
+                    #             read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
+                    if valid_pairs:
+                        query_nt, ref_nt = zip(*valid_pairs)
+                        bases = set(read.query_sequence[f] for f in query_nt)
+                    else:
+                        continue
+                    #bases=set([ read.query_sequence[f] for f in query_nt])
+                    if not bases.issubset(base_dic.keys()):
                         print(f'Ambigous bases not supported: {self.bam_file} target {target_amplicon.name}. Target will be ignored')
                         break
 
@@ -232,13 +250,22 @@ class ClassificationResult:
         self._sample=sample
         self._model_fingerprint=""
         self._model_timestamp=""
+        self._read_error_rate=0
         self._wrong_len_reads: Dict[str, int]={}
         self._read_ids: List[str] = []
         self._allele_frequencies: List[List[Tuple]] = []
 
+    def get_most_common(self, col):
+        if len(col) == 0:
+            return [(0,0)]
+        counts = np.bincount(col, minlength=6)  # Exclude zeros
+        return [(np.argmax(counts), counts.max())]
+        
+
     def get_consensus(self, data: np.array) -> str:
         if data.shape[0]>0:
-            self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
+            #self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
+            self._allele_frequencies = [self.get_most_common(col) for col in data.T]
             most_common=[f[0][0] for f in self._allele_frequencies]
             most_common_frequency=[f[0][1] for f in self._allele_frequencies]
             self.consensus_frequency=[f/data.shape[0] for f in most_common_frequency]
@@ -325,7 +352,13 @@ class ClassificationResult:
     def consensus_frequency(self, value: List[float]):
         self._consensus_frequency=value
 
+    @property
+    def read_error_rate(self) -> float:
+        return self._read_error_rate
 
+    @read_error_rate.setter
+    def read_error_rate(self, value: float):
+        self._read_error_rate = value
     
     #endRegion
 
@@ -371,10 +404,16 @@ class Classifier:
         :return binary matrix of nucleotides
         :rtype: np.array
         """
-        ouput=np.zeros( (matrix.shape[0], matrix.shape[1]*len(base_dic)), dtype=int )
+        num_cols = matrix.shape[1]
+        num_bases = len(base_dic)
+        output = np.zeros((matrix.shape[0], num_cols * num_bases), dtype=np.int8)
+
+        # Must iterate in exact order of number_dic.keys() to maintain compatibility
         for i, key in enumerate(number_dic.keys()):
-            ouput[:, (0+i)*matrix.shape[1]: (1+i)*matrix.shape[1] ]=matrix==key
-        return ouput
+            output[:, i*num_cols:(i+1)*num_cols] = (matrix == key).astype(np.int8)
+
+        return output
+
 
     def _generate_train_test_sets(self, matrix, n_train: int, n_test: int):
         """Splits a reads matrix into train and test sets of required sizes

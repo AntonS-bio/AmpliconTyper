@@ -16,10 +16,12 @@ extra_*
 Odd_*
 old*
 temp*
+*_test.pkl
 map_fastq.sh
 bams_matrix.pkl
 murium.tsv
 DELETE*
+deepsimulator/
 manuscript_data/
 pbsimm_data/
 nanosim/

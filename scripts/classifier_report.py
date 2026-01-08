@@ -34,7 +34,7 @@ class ClasssifierReport:
 
     ####START Write models' summary
     def _write_model_summary(self, results) -> str:
-        model_summary='<div class=header_line><a name="ModelSignatures">Model Signatures</a><div><a href="#Summary">Back to Summary</a></div></div>\n'
+        model_summary='<div class=header_line><a name="ModelSigna ures">Model Signatures</a><div><a href="#Summary">Back to Summary</a></div></div>\n'
         model_summary+=self._report_utilities.insert_paragraph(1)
         model_summary+="<table>\n"
         model_summary+="\t<tbody>\n"
@@ -70,10 +70,9 @@ class ClasssifierReport:
 
         summary_table=SummaryTable( self._report_utilities.get_most_recent_model_element(results),
                                     self._model_file, "high_level_genotypes" in self.models_data.metadata)
-        
         self.output_file.write( self._report_utilities.get_styles() )
+        summary_table.calculate_error_rate(results)
         self.output_file.write( summary_table.get_main_header() )
-
         #sort the list of samples and amplicons to ensure consistent order of results
         sample_report_values=sorted(sample_report_values.items(), key= lambda x: x[0])
 
@@ -112,7 +111,13 @@ class ClasssifierReport:
 
         with open(expanduser(self._output_file_name.replace(".html", ".tsv")), "w") as delim_data:
             delimited_table=DelimitedTable()
-            delim_data.write(delimited_table.get_main_header())            
+            delim_data.write(delimited_table.get_main_header())
             for sample_name, sample in sample_report_values:
                 for amplicon_name, amplicon in sample.display_order:
                     delim_data.write(  delimited_table.get_table_row(amplicon, sample) )
+
+        with open(expanduser(self._output_file_name.replace(".html", "_summary.tsv")), "w") as summary_tsv:
+            summary_tsv.write("\t".join(summary_table.HEADER_VALUES)+"\n")
+            for sample_name, sample in  sample_report_values:
+                row_value=sample.name+"\t"+ "\t".join([str(f) for f in summary_table.assemble_row_values(sample)] )+"\n"
+                summary_tsv.write( row_value.replace("&nbsp;","")  )
