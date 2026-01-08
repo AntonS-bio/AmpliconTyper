@@ -8,6 +8,7 @@ import numpy as np
 from read_classifier import ReadsMatrix, Classifier, ClassificationResult, number_dic, GenotypeSNP, ModelsData
 from data_classes import Amplicon
 import hashlib
+from read_quality_check import ThreadWithReturnValue, ReadQualityChecker
 
 class ModelManager:
     """Set of function to train a model from either BAM files or, in case
@@ -188,10 +189,11 @@ class ModelManager:
             for file in self.excluded_samples:
                 if file in raw_data["negative"]:
                     raw_data["negative"].pop(file)
-            negative_data=np.vstack( [ values[target.name] for key, values in raw_data["negative"].items() ] )
+            negative_arrays = [values[target.name] for key, values in raw_data["negative"].items()]
+            negative_data  = np.vstack(negative_arrays) if negative_arrays else np.empty((0, 0))
             negative_data_bams=np.vstack( [ np.asarray([key]*values[target.name].shape[0]).reshape(-1,1) for key, values in raw_data["negative"].items() ] )
             #Sometimes the training is done for a subset of mapped reference sequence (e.g. when doing extra primer testing)
-            bam_start, bam_end = self._coord_in_amplicon[target.name ]
+            #bam_start, bam_end = self._coord_in_amplicon[target.name ]
             #negative_data=negative_data[:,bam_start:bam_end]
             positive_data=np.vstack( [ values[target.name] for key, values in raw_data["positive"].items()] )
             #positive_data=positive_data[:,bam_start:bam_end]
@@ -253,8 +255,6 @@ class ModelManager:
         :rtype: ReadsMatrix
         """
         reads_matrix=ReadsMatrix(bam_file=bam_file, is_positive=False)
-        if bam_file=="/home/lshas17/AmpliconData/bams_typhi/ct18.bam":
-            a=1
         reads_matrix.read_bam(self._target_regions)
         return reads_matrix
 
@@ -276,23 +276,15 @@ class ModelManager:
                 bam_matrices:Dict[str, Dict[str,np.array]]=dict( (basename(f.bam_file), f.read_matrices) for f in msa_results  )
                 return bam_matrices
             
-
-    def _classify_new_data_helper(self, bam_file:str) -> ClassificationResult:
-        '''Function called by multithreading pool to allow faster processing
-        of data. The multithreading has to be based on simultaneous processing
-        of amplicons, not BAMs due large size of the data inputs which prevents
-        spawning classifiers for each BAM
+    def get_bam_quality(self, bam_file: str) -> float:
+        '''Function to calculate the expected error rate based on PHRED scores
+        in BAM file. Run in parallel with classification for speed.
 
         :param input_data: Tuple containing reads matrix, target amplicon and name of sample
         :type: Tuple[np.array, Amplicon, str]
         '''
 
-        with open(self._model_output_file, "rb") as model_file:
-            self.models_data: ModelsData = pickle.load(model_file)
-            self.trained_models=self.models_data.classifiers
-
-        reads_data: ReadsMatrix=self._process_bams(bam_file)
-
+    def apply_classifier(self, reads_data: ReadsMatrix, bam_file: str) -> List[ClassificationResult]:
         results: List[ClassificationResult] = []
         for amplicon in self._target_regions:
             reads=reads_data.read_matrices[amplicon.name]
@@ -311,6 +303,42 @@ class ModelManager:
             results.append(classification)
         del reads_data
         return results
+
+
+    def _classify_new_data_helper(self, bam_file:str) -> List[ClassificationResult]:
+        '''Function called by multithreading pool to allow faster processing
+        of data. The multithreading has to be based on simultaneous processing
+        of amplicons, not BAMs due large size of the data inputs which prevents
+        spawning classifiers for each BAM
+
+        :param input_data: Tuple containing reads matrix, target amplicon and name of sample
+        :type: Tuple[np.array, Amplicon, str]
+        '''
+
+        with open(self._model_output_file, "rb") as model_file:
+            self.models_data: ModelsData = pickle.load(model_file)
+            self.trained_models=self.models_data.classifiers
+
+        reads_data: ReadsMatrix=self._process_bams(bam_file)
+
+        quality_check: float = ThreadWithReturnValue(target=ReadQualityChecker().calculate_quality, args=([bam_file]))
+        read_classification: List[ClassificationResult] = ThreadWithReturnValue(target=self.apply_classifier, args=([reads_data, bam_file]))
+
+        quality_check.start()
+        read_classification.start()
+
+        reads_quality=quality_check.join()
+        read_classification=read_classification.join()
+
+        for result in read_classification:
+            result.read_error_rate=reads_quality
+
+        return read_classification
+
+
+        #This has to run after bam is loaded into matrix to avoid I/O conflicts
+
+
 
     def classify_new_data(self, target_regions: List[Amplicon], bam_files: List[str]) -> List[ClassificationResult]:
         """Creates nucleotides matrix from existing nucleotide matrices

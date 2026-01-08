@@ -39,6 +39,9 @@ class UpdateChecker:
                     for element in  response.json():
                         if self.get_model_name_prefix(element["name"]) == self._model_prefix:
                             server_model_versions.append(self.get_model_num_from_filename(element["name"]))
+                    if len(server_model_versions)==0:
+                        self._result+=f'Could not locate the models with name pattern {self._model_prefix}_v{self._model_current_version} on GitHub'+"\n"
+                        return True
                     if max(server_model_versions)> self._model_current_version:
                         self._result+=f'Newer model version is available: {self._model_prefix}_v{max(server_model_versions)}.pkl'+"\n"
                         self._result+="You can download it here: https://github.com/AntonS-bio/AmpliconTyper/tree/main/models"+"\n"

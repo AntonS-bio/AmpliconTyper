@@ -26,26 +26,22 @@ def load_hierarchy(model_file: str, heirarchy_file:str) -> None:
         model_manager: Dict[str, Classifier] =load(input_model)
 
 
-# def add_high_level_gts(model_data : ModelsData) -> None:
-#     #This is required to accomodate inconsistent definition of higher levels genotypes (0, 1, 2, 3, 4) in S. Typhi.
-#     data=pd.DataFrame(columns=["Amplicon", "Pos","0","1","2","3","4"])
-#     data.set_index(["Amplicon", "Pos"], inplace=True)
-#     data.loc[ ('1_3_4.3.1',381), ['0','1','2','3','4']] = ['C', 'C', 'C', 'T','T']
-#     data.loc[ ('1_3_4.3.1',795), ['0','1','2','3','4']] = ['G', 'T', 'T', 'T','T']
-#     data.loc[ ('2.2.2_2',1585), ['0','1','2','3','4']] = ['C', 'C', 'T', 'T','T']
-#     data.loc[ ('4.3.1.2.1.1_4',1047), ['0','1','2','3','4']]=['G', 'G', 'G', 'G','A']
-#     model_data.metadata["high_level_genotypes"]=data
 
-#     for amplicon, position, alias in zip(["1_3_4.3.1", "1_3_4.3.1", "2.2.2_2","4.3.1.2.1.1_4"],
-#                                           [381, 795, 1585, 1047], ["0-2","0","0-1","4"]):
-#         for snp in model_data.classifiers[amplicon].genotype_snps:
-#             if snp.position==position:
-#                 alt_allele=snp.genotypes.popitem()[0]
-#                 snp._genotypes[alt_allele]= alias
+def test(model_file: str) -> None:
+    with open("/home/lshas17/AmpliconTyper/models/typhi_v8.pkl", "rb") as input_model:
+        model_manager_v8: Dict[str, Classifier] =load(input_model)
 
-#     new_model_file=expanduser("~/HandyReadGenotyper/models/typhi_v6.pkl")
-#     with open(new_model_file, "wb") as new_model_file_output:
-#         dump(model_data, new_model_file_output)
+    with open("/home/lshas17/AmpliconTyper/models/typhi_v8_new_gyr.pkl", "rb") as input_model:
+        model_manager_v8_new_gyrA: Dict[str, Classifier] =load(input_model)
+
+
+    with open("/home/lshas17/AmpliconTyper/models/typhi_v10_test.pkl", "rb") as input_model:
+        model_manager_v10: Dict[str, Classifier] =load(input_model)
+
+    model_manager_v10.classifiers["3.1.1_v5"]=model_manager_v8.classifiers["3.1.1_v5"]
+    new_model_file=expanduser("~/AmpliconTyper/models/typhi_v11_candidate.pkl")
+    with open(new_model_file, "wb") as new_model_file_output:
+        dump(model_manager_v10, new_model_file_output)
 
 def rename_mdr_loci(model_manager: ModelsData) -> None:
     new_names={"chr_4.3.1.1_none_LT904852.1":"chromosomal_MDR_yidA",
@@ -70,10 +66,6 @@ def rename_mdr_loci(model_manager: ModelsData) -> None:
     #     dump(model_manager, new_model_file_output)
 
 
-def test() -> None:
-    pass
-
-
 def main():
 
     parser = argparse.ArgumentParser(description='Various utilities for manipulating classification model')
@@ -91,16 +83,18 @@ def main():
     except:
         parser.print_help()
         exit(0)
+
+    if args.model is None:
+        print("To get reference sequence a model file must be specified!")
+        exit(0)
+    model_file=expanduser(args.model)
+    if not exists(model_file):
+        print(f'Model file {model_file} does not exist!')
+        exit(0)
+
     if args.test:
-        test()
+        test(model_file)
     if args.reference or args.snps:
-        if args.model is None:
-            print("To get reference sequence a model file must be specified!")
-            exit(0)
-        model_file=expanduser(args.model)
-        if not exists(model_file):
-            print(f'Model file {model_file} does not exist!')
-            exit(0)
         if args.reference:
             get_reference_fasta(model_file)
         elif args.snps:

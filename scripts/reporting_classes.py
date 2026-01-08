@@ -12,11 +12,12 @@ OPENER_ALT='<tr class=alt_row><td>'
 CLOSER='</td></tr>'
 MIDDLE='</td><td>'
 MIDDLE_WIDE='</td class=td_alt_wide><td>'
-LOW_READ_WARNING_PERCENT=0.05
+GT_REPORTING_MIN_READ_PERCENT=0.05
 POSITIVE_CASES_THRESHOLD=50
 CORRECT_TO_WRONG_LEN_RATIO=3.0
 POSITIVE_CASES_MIN_AMPLICONS=2
 MAX_ALLOWED_SNPS=1
+EXPECTED_ERROR_RATE=0.03
 
 class ReportingUtilities:
     def __init__(self):
@@ -93,13 +94,13 @@ class AlleleInfo:
         return self._frequency
 
 class AmpliconReportValues:
-    def __init__(self, result: ClassificationResult):
+    def __init__(self, result: ClassificationResult, model: Classifier):
         self._name=result.amplicon.name
         self._result: ClassificationResult=result
         self._is_transient=False
         self._all_gts: Tuple[str, bool]=("", False)
         self._num_unknown_snps=-1
-        self._model: Classifier = None
+        self._model: Classifier = model
         self._dominant_snps: Dict[int, str] = {}
         self._alleles: List[AlleleInfo] = self.calculate_all_alleles()
 
@@ -177,7 +178,16 @@ class AmpliconReportValues:
             if sum([f[1] for f in position_frequencies])> POSITIVE_CASES_THRESHOLD:
                 for nt_code, read_count in position_frequencies:
                     nt_freq=read_count/self.target_org_reads
-                    if nt_freq>LOW_READ_WARNING_PERCENT:
+                    matching_known_snps=[f for f in self.all_defined_snps if f.position==pos and number_dic[nt_code] in f.genotypes]
+
+                    #check for presence of attribute is required for compatability with older models.
+                    if len(matching_known_snps)==1 and \
+                            hasattr(matching_known_snps[0], 'reporting_threshold') and \
+                            matching_known_snps[0].reporting_threshold:
+                        freq_reportin_threshold=matching_known_snps[0].reporting_threshold
+                    else:
+                        freq_reportin_threshold=GT_REPORTING_MIN_READ_PERCENT
+                    if nt_freq>freq_reportin_threshold:
                         result.append( AlleleInfo(self._result.amplicon.ref_seq.sequence[pos], number_dic[nt_code],
                                                    pos, read_count, nt_freq, self.name ) )
         return result
@@ -368,8 +378,7 @@ class SampleReportValues:
         self._reporting_genotype=ReportingGenotype( model_data.metadata.get("hierarchy",{}) )
         self._utilities=ReportingUtilities()
         for result in amplicon_results:
-            new_report_amplicon=AmpliconReportValues(result)
-            new_report_amplicon.model=model_data.classifiers[result.amplicon.name]
+            new_report_amplicon=AmpliconReportValues(result, model=model_data.classifiers[result.amplicon.name])
             self._amplicon_results[result.amplicon.name]=new_report_amplicon
 
         all_alleles=[allele for amplicon, result in self._amplicon_results.items() for allele in result.alleles]
@@ -400,6 +409,18 @@ class SampleReportValues:
     def model_data(self) -> ModelsData:
         '''Returns and object containing Classifier models and metadata for the models'''
         return self._model_data
+
+    @property
+    def target_org_support(self) -> str:
+        '''Returns and object containing Classifier models and metadata for the models'''
+        valid_amplicons=sum([1 if not f.is_amr and f.target_org_reads>50 and len(f.all_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
+        if valid_amplicons>=4:
+            return "Strong"
+        elif valid_amplicons>=2:
+            return "Weak"
+        else:
+            return "None"
+
 
     @property
     def display_order(self):
@@ -502,16 +523,15 @@ class SummaryTable:
         self._model_date=model_date
         self._include_optional_columns = include_optional_columns
         self._show_len_ratio_warning=False
+        self._sequencing_error_rate=-1
         
     OPTIONAL_COLUMN=["Possible High Level Genotypes"]
     FIRST_LINE='<div class=header_line><a name="Summary">Summary of results</div>\n'
-    HEADER_VALUES=["Sample", "Amplicons by # of dominant unknown SNPs", "Possible High Level Genotypes", "Implied Genotypes","Implied AMR",
-                   "Sequencing Reads","Mapped, correct length", "Mapped, but too short/long"]#," Highest read count","Lowest read count"]
+    HEADER_VALUES=["Sample", "Support for Target Organism",  "Possible High Level Genotypes", "Implied Genotypes", "Implied AMR",
+                   "Sequencing Reads","Mapped, correct length", "Mapped, but too short/long", "Amplicons by # of dominant unknown SNPs"]#," Highest read count","Lowest read count"]
     HEADER_TOOLTIP_TEXT=["Sample name, you can make it more informative by adding sample description using options -c and -d.", #Sample
-                         "Numbers means number of amplicons, number's position-1 indicates how many unknown SNPs these amplicons have.&#10\
-E.g. 2,0,4,0,0 means there are 2 amplicons without unknown SNPs (position is 1, so 1-1=0), and \
-4 amplicons with 2 unknown SNPs each (position is 3-1=2).&#10\
-Only examines the amplicons that should be always present i.e. excludes plasmids, recombinations, etc.", #Amplicon/SNP diagram
+                         "Based on number of valid amplicons: Strong is 4+, Weak is 2-3 and None 0-1. Valid amplicon has to be&#10\
+                         a) not AMR related&#10b)have at least 50 target reads&#10c)have <=2 uknown SNPs",
                          "Relevant for some organisms (e.g. S. Typhi) where some genotypes cannot be determined with single SNP.&#10\
 Shows high level genotypes (in S. Typhi these are 0, 1, 2, 3, 4) that are possible given detected amplicons.&#10\
 Uses all alleles that are supported by >"+str(POSITIVE_CASES_THRESHOLD)+"reads.&#10'Any' means detected amplicons provide no information on the high level genotypes.", #HL genotypes
@@ -520,8 +540,31 @@ Uses all alleles that are supported by >"+str(POSITIVE_CASES_THRESHOLD)+"reads.&
 Mutation description means this mutation was detected in respective amplicon", #Implied AMR
                           "Total reads in FASTQ files. If classification is done from BAM files this field will be blank.", #Total reads
                           "Reads which mapped to some amplicon and have length that meets -l and -s parameters.", #Corrent lengths
-                          "Reads which mapped to some amplicons, but have length that does not meet -l and -s parameters.&#10See values used just below 'Summary of results' table"] #Too long
+                          "Reads which mapped to some amplicons, but have length that does not meet -l and -s parameters.&#10See values used just below 'Summary of results' table",
+                            "Numbers means number of amplicons, number's position-1 indicates how many unknown SNPs these amplicons have.&#10\
+                            E.g. 2,0,4,0,0 means there are 2 amplicons without unknown SNPs (position is 1, so 1-1=0), and \
+                            4 amplicons with 2 unknown SNPs each (position is 3-1=2).&#10\
+                            Only examines the amplicons that should be always present i.e. excludes plasmids, recombinations, etc."] #Amplicon/SNP diagram                          ] #Too long
 
+    def calculate_error_rate(self, results: List[ClassificationResult])-> float:
+        '''Calculates the expected error rate based on PHRED/Q scores and
+        weighted by read counts'''
+        self._sequencing_error_rate=sum( [(f.negative_cases+f.positive_cases)*f.read_error_rate for f in results] )/sum( [(f.negative_cases+f.positive_cases) for f in results] )
+        return self._sequencing_error_rate
+    
+    def get_error_rate_blurb(self) -> str:
+        if self._sequencing_error_rate==-1:
+            return "<div>Something went wrong - sequencing error rate not calculated.</div>"
+        else:
+            if self._sequencing_error_rate<EXPECTED_ERROR_RATE*1.5:
+                return f'<div>Expected error rate based on Q-scores: {self._sequencing_error_rate:.2%}. This is within the expected range.</div>'
+            else:
+                result='<div style="color:red">'
+                result+=f'Expected error rate based on Q-scores:{self._sequencing_error_rate:.2%}. This is much higher than expected range (~{EXPECTED_ERROR_RATE:.2%})'
+                result+=" and will make genotype and AMR calls very unreliable. This is a sequencing, not analysis problem."
+                result+=" Please check MinKNOW to identify possible causes.</div>"
+                return  result
+            
     def get_main_header(self) -> str:
         main_header=SummaryTable.FIRST_LINE
         if not self._include_optional_columns:
@@ -529,6 +572,7 @@ Mutation description means this mutation was detected in respective amplicon", #
                 self.HEADER_VALUES.remove(optional_value)
         main_header+='<div>Model name: '+ self._model_file + \
                         ', model date: '+self._model_date+'</div>\n'
+        main_header+=self.get_error_rate_blurb()
         main_header+=self.utilities.insert_paragraph(1)
         main_header+="<table>\n"
         main_header+="\t<tbody>\n"
@@ -546,6 +590,16 @@ Mutation description means this mutation was detected in respective amplicon", #
         main_tail+='<p>Report generated on '+datetime.now().strftime("%d/%b/%y at %H:%M")+'. <a href="#ModelSignatures">See models list</a></p>'
         return main_tail
 
+    def assemble_row_values(self, sample: SampleReportValues, wrong_len_suffix: str=""):
+        if self._include_optional_columns:
+            values=[sample.target_org_support, sample.possible_highlevel_gts, sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
+                sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix,sample.snp_frequency_diagram() ]
+           
+        else:
+            values=[sample.target_org_support, sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
+                sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix,sample.snp_frequency_diagram() ]
+        return values
+
     def get_table_row(self, sample: SampleReportValues, alt_style=False) -> str:
         sample_name_href='<a href="#'+sample.name+'">'+sample.name_with_description+"</a>"
         if sample.mapped_count==sample.wrong_length_count:
@@ -556,14 +610,14 @@ Mutation description means this mutation was detected in respective amplicon", #
             self._show_len_ratio_warning=True #will display information that 3.0x read are rejected
             #and suggest the adjustment to -s and -l parameters to fix this.
         wrong_len_suffix="^" if lengths_ratio>CORRECT_TO_WRONG_LEN_RATIO else ""
-        if self._include_optional_columns:
-            values=[sample_name_href, sample.snp_frequency_diagram(), sample.possible_highlevel_gts, sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
-                sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix ]
+        values=[sample_name_href]+self.assemble_row_values(sample, wrong_len_suffix)#+[wrong_len_suffix]
+        # if self._include_optional_columns:
+        #     values=[sample_name_href, sample.snp_frequency_diagram(), sample.possible_highlevel_gts, sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
+        #         sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix ]
            
-        else:
-            values=[sample_name_href, sample.snp_frequency_diagram(), sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
-                sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix ]
-
+        # else:
+        #     values=[sample_name_href, sample.snp_frequency_diagram(), sample.agg_gts, sample.agg_amrs, sample.sequencing_read_count,
+        #         sample.mapped_count-sample.wrong_length_count, str(sample.wrong_length_count)+wrong_len_suffix ]
 
         if alt_style: #Alternate row colours
             table_line=OPENER_ALT+MIDDLE.join([str(f) for f in values])+CLOSER
@@ -571,6 +625,9 @@ Mutation description means this mutation was detected in respective amplicon", #
             table_line=OPENER+MIDDLE.join([str(f) for f in values])+CLOSER
 
         return table_line+"\n"
+    
+
+
 
 class SampleTable:
 
@@ -583,7 +640,7 @@ class SampleTable:
                          "Percentage of mapped reads that were classified as target organism and that satisfied -s and -l length parameteres",
                          "Number of reads that were classified as target organism and that satisfied -s and -l length parameteres",
                          f'Number of SNPs detected that match known SNPs defined in classifier model file you used.&#10\
-Includes all alleles different from references that occur in >{POSITIVE_CASES_THRESHOLD} reads and no less than {LOW_READ_WARNING_PERCENT}% of all reads',
+Includes all alleles different from references that occur in >{POSITIVE_CASES_THRESHOLD} reads and no less than {GT_REPORTING_MIN_READ_PERCENT}% of all reads',
                          f'Shows those detected SNPs that match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10\
 E.g. if at position 254 the reference is C, but in reads the most common nucleotide is T this would count in this column.&#10\
 If T occcured, but the most common was C, this would not count in this column. ',

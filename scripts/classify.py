@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from subprocess import run, PIPE
+import subprocess 
 from typing import List, Dict
 from pickle import load
 from sys import exc_info
@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 from map import ReadMapper
 import pysam as ps
 
-VERSION="0.1.29"
+VERSION="0.1.30"
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
     target_regions: List[Amplicon] = []
@@ -72,7 +72,7 @@ def get_postive_reads(results: List[ClassificationResult], target_reads_bams: st
             if read.query_name in ids:
                 target_reads_bam.write(read)
         target_reads_bam.close()
-        run(f'samtools index {output_file} {output_file+".bai"}', shell=True, executable="/bin/bash", stdout=PIPE,  stderr=PIPE)
+        subprocess.run(f'samtools index {output_file} {output_file+".bai"}', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
 def get_arguments():
     parser = ArgumentParser(description='Classify reads in BAM file using existing model or train a model from bam files')
@@ -214,14 +214,14 @@ async def classify(temp_dir, args):
     report.create_report(results)
     rmtree(temp_dir)
     print("Done")
-    
+
 async def check_for_updates():
     temp_dir=expanduser( join("./",str(uuid4())) )
 
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
-        await gather(checker.get_result(VERSION), classify(temp_dir, input_arguments))
+        await gather(checker.get_result(VERSION))#, classify(temp_dir, input_arguments))
         print("\n"+checker.result)
 
     except Exception as e:

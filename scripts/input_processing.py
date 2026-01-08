@@ -21,6 +21,8 @@ class InputProcessing:
                 file_to_classify.append(bam_source)
             else:
                 print(f'BAM file {bam_source} does not exist. Maybe the location is incorrect?')
+        elif not exists(bam_source):
+            mkdir(bam_source)
         else:
             #check that list of bams contains valid bams
             with open(bam_source) as bam_list:
