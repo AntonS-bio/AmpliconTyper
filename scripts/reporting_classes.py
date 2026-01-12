@@ -175,21 +175,23 @@ class AmpliconReportValues:
         """
         result=[]
         for pos, position_frequencies in enumerate(self._result._allele_frequencies):
-            if sum([f[1] for f in position_frequencies])> POSITIVE_CASES_THRESHOLD:
-                for nt_code, read_count in position_frequencies:
-                    nt_freq=read_count/self.target_org_reads
-                    matching_known_snps=[f for f in self.all_defined_snps if f.position==pos and number_dic[nt_code] in f.genotypes]
+            if self.name == "4.3.1.2_v3" and pos==449:
+                a=1
+            #if sum([f[1] for f in position_frequencies])> POSITIVE_CASES_THRESHOLD:
+            for nt_code, read_count in position_frequencies:
+                nt_freq=read_count/self.target_org_reads
+                matching_known_snps=[f for f in self.all_defined_snps if f.position==pos and number_dic[nt_code] in f.genotypes]
 
-                    #check for presence of attribute is required for compatability with older models.
-                    if len(matching_known_snps)==1 and \
-                            hasattr(matching_known_snps[0], 'reporting_threshold') and \
-                            matching_known_snps[0].reporting_threshold:
-                        freq_reportin_threshold=matching_known_snps[0].reporting_threshold
-                    else:
-                        freq_reportin_threshold=GT_REPORTING_MIN_READ_PERCENT
-                    if nt_freq>freq_reportin_threshold:
-                        result.append( AlleleInfo(self._result.amplicon.ref_seq.sequence[pos], number_dic[nt_code],
-                                                   pos, read_count, nt_freq, self.name ) )
+                #check for presence of attribute is required for compatability with older models.
+                if len(matching_known_snps)==1 and \
+                        hasattr(matching_known_snps[0], '_reporting_threshold') and \
+                        matching_known_snps[0].reporting_threshold:
+                    freq_reporting_threshold=matching_known_snps[0].reporting_threshold
+                else:
+                    freq_reporting_threshold=GT_REPORTING_MIN_READ_PERCENT
+                if nt_freq>freq_reporting_threshold:
+                    result.append( AlleleInfo(self._result.amplicon.ref_seq.sequence[pos], number_dic[nt_code],
+                                                pos, read_count, nt_freq, self.name ) )
         return result
 
     @property

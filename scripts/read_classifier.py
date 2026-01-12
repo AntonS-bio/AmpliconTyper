@@ -263,6 +263,8 @@ class ClassificationResult:
         
 
     def get_consensus(self, data: np.array) -> str:
+        if self._amplicon.name=="4.3.1.2_v3":
+            a=1
         if data.shape[0]>0:
             #self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
             self._allele_frequencies = [self.get_most_common(col) for col in data.T]

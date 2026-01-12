@@ -221,7 +221,7 @@ async def check_for_updates():
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
-        await gather(checker.get_result(VERSION))#, classify(temp_dir, input_arguments))
+        await gather(checker.get_result(VERSION), classify(temp_dir, input_arguments))
         print("\n"+checker.result)
 
     except Exception as e:
