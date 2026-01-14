@@ -175,8 +175,6 @@ class AmpliconReportValues:
         """
         result=[]
         for pos, position_frequencies in enumerate(self._result._allele_frequencies):
-            if self.name == "4.3.1.2_v3" and pos==449:
-                a=1
             #if sum([f[1] for f in position_frequencies])> POSITIVE_CASES_THRESHOLD:
             for nt_code, read_count in position_frequencies:
                 nt_freq=read_count/self.target_org_reads
@@ -228,6 +226,8 @@ class AmpliconReportValues:
         """Returns all SNPs detected in the data that match
           SNP defined in the amplicon classifier model.
         """
+        if self.name=="1_3_4.3.1":
+            a=1
         result: List[GenotypeSNP] = []
         for allele in self.alleles:
             known_alleles=[f for f in self.all_defined_snps if f.position==allele.pos and allele.nucl in f.genotypes]

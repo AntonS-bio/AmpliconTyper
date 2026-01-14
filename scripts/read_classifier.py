@@ -259,15 +259,16 @@ class ClassificationResult:
         if len(col) == 0:
             return [(0,0)]
         counts = np.bincount(col, minlength=6)  # Exclude zeros
-        return [(np.argmax(counts), counts.max())]
+        #return [(np.argmax(counts), counts.max())]
+        return [(i,val) for i, val in enumerate(counts) if val>0]
         
 
     def get_consensus(self, data: np.array) -> str:
-        if self._amplicon.name=="4.3.1.2_v3":
-            a=1
+        # if self._amplicon.name=="4.3.1.2_v3":
+        #     a=1
         if data.shape[0]>0:
-            #self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
-            self._allele_frequencies = [self.get_most_common(col) for col in data.T]
+            self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
+            #self._allele_frequencies = [self.get_most_common(col) for col in data.T]
             most_common=[f[0][0] for f in self._allele_frequencies]
             most_common_frequency=[f[0][1] for f in self._allele_frequencies]
             self.consensus_frequency=[f/data.shape[0] for f in most_common_frequency]
