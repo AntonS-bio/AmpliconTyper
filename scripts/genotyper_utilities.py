@@ -28,20 +28,25 @@ def load_hierarchy(model_file: str, heirarchy_file:str) -> None:
 
 
 def test(model_file: str) -> None:
-    with open("/home/lshas17/AmpliconTyper/models/typhi_v8.pkl", "rb") as input_model:
-        model_manager_v8: Dict[str, Classifier] =load(input_model)
+    pass
+    # with open("/home/lshas17/AmpliconTyper/models/paratyphi_A_v3.pkl", "rb") as input_model:
+    #     model_manager_para: Dict[str, Classifier] =load(input_model)
 
-    with open("/home/lshas17/AmpliconTyper/models/typhi_v8_new_gyr.pkl", "rb") as input_model:
-        model_manager_v8_new_gyrA: Dict[str, Classifier] =load(input_model)
+    # with open("/home/lshas17/paratyphi/model/gt_snps.tsv") as snps:
+    #     snps.readline()
+    #     for line in snps:
+    #         contig_id, reference_nucl, Alt_nucl, GT, position, is_amr=line.strip().split("\t")
+    #         if GT=="2.3":
+    #             snp=GenotypeSNP(contig_id, position,Alt_nucl,False)
+    #             snp.genotypes[reference_nucl]=GT
+    #         else:
+    #             snp=GenotypeSNP(contig_id, position,reference_nucl,False)
+    #             snp.genotypes[Alt_nucl]=GT
+    #         model_manager_para.classifiers[contig_id].genotype_snps.append(snp)
 
-
-    with open("/home/lshas17/AmpliconTyper/models/typhi_v10_test.pkl", "rb") as input_model:
-        model_manager_v10: Dict[str, Classifier] =load(input_model)
-
-    model_manager_v10.classifiers["3.1.1_v5"]=model_manager_v8.classifiers["3.1.1_v5"]
-    new_model_file=expanduser("~/AmpliconTyper/models/typhi_v11_candidate.pkl")
-    with open(new_model_file, "wb") as new_model_file_output:
-        dump(model_manager_v10, new_model_file_output)
+    # new_model_file=expanduser("/home/lshas17/AmpliconTyper/models/paratyphi_A_v4.pkl")
+    # with open(new_model_file, "wb") as new_model_file_output:
+    #     dump(model_manager_para, new_model_file_output)
 
 def rename_mdr_loci(model_manager: ModelsData) -> None:
     new_names={"chr_4.3.1.1_none_LT904852.1":"chromosomal_MDR_yidA",
