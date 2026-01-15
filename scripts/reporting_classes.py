@@ -415,7 +415,7 @@ class SampleReportValues:
     @property
     def target_org_support(self) -> str:
         '''Returns and object containing Classifier models and metadata for the models'''
-        valid_amplicons=sum([1 if not f.is_amr and f.target_org_reads>50 and len(f.all_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
+        valid_amplicons=sum([1 if not f.is_amr and f.target_org_reads>50 and len(f.dominant_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
         if valid_amplicons>=4:
             return "Strong"
         elif valid_amplicons>=2:
