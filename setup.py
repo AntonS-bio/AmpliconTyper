@@ -53,6 +53,7 @@ setup(name='AmpliconTyper',
           'scripts/map.py',
           'scripts/model_manager.py',
           'scripts/read_classifier.py',
+          'scripts/read_quality_check.py'          
           'scripts/reporting_classes.py',
           'scripts/train.py'
       ],
