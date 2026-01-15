@@ -1,5 +1,5 @@
 {% set name = "AmpliconTyper" %}
-{% set version = "0.1.30" %}
+{% set version = "0.1.31" %}
 
 package:
   name: {{ name|lower }}

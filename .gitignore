@@ -28,7 +28,7 @@ nanosim/
 seq2squiggle/
 gyrA_v2_train/
 naive_simulator/
-
+test_train_data/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
