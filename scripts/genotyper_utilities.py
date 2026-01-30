@@ -31,6 +31,13 @@ def test(model_file: str) -> None:
     pass
     # with open("/home/lshas17/AmpliconTyper/models/paratyphi_A_v3.pkl", "rb") as input_model:
     #     model_manager_para: Dict[str, Classifier] =load(input_model)
+    # with open("/home/lshas17/AmpliconTyper/models/typhi_v11.pkl", "rb") as input_model:
+    #     model_manager_para: Dict[str, Classifier] =load(input_model)
+
+
+    # new_model_file=expanduser("/home/lshas17/AmpliconTyper/models/typhi_v12_temp.pkl")
+    # with open(new_model_file, "wb") as new_model_file_output:
+    #     dump(model_manager_para, new_model_file_output)
 
     # with open("/home/lshas17/paratyphi/model/gt_snps.tsv") as snps:
     #     snps.readline()

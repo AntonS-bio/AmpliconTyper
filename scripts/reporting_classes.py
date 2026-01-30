@@ -226,8 +226,6 @@ class AmpliconReportValues:
         """Returns all SNPs detected in the data that match
           SNP defined in the amplicon classifier model.
         """
-        if self.name=="1_3_4.3.1":
-            a=1
         result: List[GenotypeSNP] = []
         for allele in self.alleles:
             known_alleles=[f for f in self.all_defined_snps if f.position==allele.pos and allele.nucl in f.genotypes]
@@ -320,36 +318,82 @@ class ReportingGenotype:
         self._reporting_gt=""
         self._hierarchy=hierarchy
         self._levels: Dict[str, int]={} #key = genotype, value = depth of nesting
-        if not hierarchy is None:
-            self.generate_levels()
-        
-    def generate_levels(self):
-        #the hierarchy data is nested dictionary {"1": {"type": "genotype", children: { "2": "type": "genotype", "children"     }    } }
-        self._levels.clear()
-        for key, values in self._hierarchy.items():
-            self._levels[key]=1
-            if "children" in values:
-                self.generate_levels_helper(values["children"], 2)
+        self._upturned_tree:Dict[str, List[str]] = self.upturn_tree(self._hierarchy)
+        self._upturned_tree["2.3.1"]=['1', '2', '2.3.2'] #fix in next model version
+        self._upturned_tree["2.3.2"]=['1', '2']
 
-    def generate_levels_helper(self, data: Dict[str, Dict], current_level) -> int:
-        for key, values in data.items():
-            self._levels[key]=current_level
-            if "children" in values:
-                self.generate_levels_helper(values["children"], current_level+1)
+    def _collect_ancestors(self, node, ancestors, result):
+        for key, value in node.items():
+            result[key] = list(ancestors)
+            children = value.get("children", {})
+            if children:
+                self._collect_ancestors(children, ancestors + [key], result)
 
-    def get_lowest_level_gt(self, alleles: List[AlleleInfo]) -> str:
+
+    def upturn_tree(self, tree) -> Dict[str, List[str]]:
+        result = {}
+        self._collect_ancestors(tree, [], result)
+        #remove separate high level genotypes
+        for gt, parents in result.items():
+            if len(parents)>1:
+                to_drop=[]
+                for parent in parents:
+                    if parent[0]!=gt[0]:
+                        to_drop.append(parent)
+                for item in to_drop:
+                    parents.remove(item)
+        return result
+
+    def get_lowest_level_gt(self, alleles: List[AlleleInfo]):
         if len(alleles)==0:
             return ""
         else:
-            lowest_gt=None
-            for allele in alleles:
-                if allele.implication in self._levels:
-                    if lowest_gt is None or self._levels[allele.implication]>self._levels[lowest_gt.implication]:
-                        lowest_gt=allele
-            if lowest_gt is None: #the identified allele(s) are not genotype specific
-                return ""
-            else:
-                return lowest_gt.implication+" ("+'{:.0%}'.format(lowest_gt.freq)+")"
+            lowest_gts: List[AlleleInfo]=[] #lowest level gts among all detected SNPs
+            for allele in alleles: #alleles present in the sample
+                if allele.implication in self._upturned_tree: #fixed list of ancestry
+                    is_ancestral=False
+                    for gt in lowest_gts: #check if allele implication is ancestral to checked GTs
+                        if allele.implication in self._upturned_tree[gt.implication]:
+                            is_ancestral=True
+                            break
+                    if not is_ancestral:
+                        lowest_gts.append(allele)
+        lowest_gts=self.trim_low_leverl_gts(lowest_gts)
+        if len(lowest_gts)==0: #the identified allele(s) are not genotype specific
+            return ""
+        else:
+            result=""
+            for f in lowest_gts:
+                result+=", "+ f.implication+" ("+'{:.0%}'.format(f.freq)+")"
+                if int(f.depth)<POSITIVE_CASES_THRESHOLD:
+                    result+="(?)"
+            return result[len(", "):] #remove the leading separator
+
+    def trim_low_leverl_gts(self, alleles:List[AlleleInfo])->str:
+        #case 1: parent and child reported at the same
+        #case 2: two cases: same allele reported twice from different amplicons
+        ancestors: List[AlleleInfo]=[]
+        for allele in alleles:
+            for second_allele in alleles:
+                if second_allele.implication in self._upturned_tree[allele.implication]:
+                    ancestors.append(second_allele)
+        #remove all ancestors
+        for allele in ancestors:
+            alleles.remove(allele)
+        #case 2 - remove redundant alles keeping the ones with highest number of reads
+        Counter(alleles)
+        unique_gts=Counter([f.implication for f in alleles])
+        except_counts=[key for key, value in unique_gts.items() if value>1]
+        alleles_to_drop=[]
+        for gt in except_counts:
+            sorted_by_depth=sorted(list([(f, f.freq) for f in alleles if f.implication==gt]), key=lambda x: x[1], reverse=True)
+            alleles_to_drop=alleles_to_drop+[f[0] for f in sorted_by_depth[1:]]
+        for value in alleles_to_drop:
+            alleles.remove(value)
+        return alleles
+    ##NEW###
+
+
 
     def possible_high_level_gts(self, alleles: List[AlleleInfo], genotypes_matrix: pd.DataFrame) -> List[str]:
         '''Returns possible values for high level genotypes
@@ -375,6 +419,7 @@ class ReportingGenotype:
 class SampleReportValues:
     
     def __init__(self, sample_name:str, amplicon_results: List[ClassificationResult], model_data: ModelsData):
+        self._sample_name=amplicon_results[0].sample
         self._amplicon_results: Dict[str, AmpliconReportValues] = {}
         self._model_data=model_data
         self._reporting_genotype=ReportingGenotype( model_data.metadata.get("hierarchy",{}) )
@@ -415,7 +460,7 @@ class SampleReportValues:
     @property
     def target_org_support(self) -> str:
         '''Returns and object containing Classifier models and metadata for the models'''
-        valid_amplicons=sum([1 if not f.is_amr and f.target_org_reads>50 and len(f.dominant_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
+        valid_amplicons=sum([1 if not f.is_transient and f.target_org_reads>50 and len(f.dominant_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
         if valid_amplicons>=4:
             return "Strong"
         elif valid_amplicons>=2:
@@ -457,7 +502,8 @@ class SampleReportValues:
             return "-"
         gts: List[AlleleInfo]=[]
         for amplicon_name, value in self._amplicon_results.items():
-            gts+=value.amplicon_gts_list
+            if value.target_org_reads>POSITIVE_CASES_THRESHOLD:
+                gts+=value.amplicon_gts_list
         return self._reporting_genotype.get_lowest_level_gt(gts)
 
     @property
@@ -520,9 +566,10 @@ class SampleReportValues:
 
 class SummaryTable:
     utilities=ReportingUtilities()
-    def __init__(self, model_date: str, model_file: str, include_optional_columns="False" ):
+    def __init__(self, model_date: str, model_file: str, software_version:str, include_optional_columns="False" ):
         self._model_file=  basename(model_file).replace(".pkl","")
         self._model_date=model_date
+        self._software_version=software_version
         self._include_optional_columns = include_optional_columns
         self._show_len_ratio_warning=False
         self._sequencing_error_rate=-1
@@ -533,11 +580,11 @@ class SummaryTable:
                    "Sequencing Reads","Mapped, correct length", "Mapped, but too short/long", "Amplicons by # of dominant unknown SNPs"]#," Highest read count","Lowest read count"]
     HEADER_TOOLTIP_TEXT=["Sample name, you can make it more informative by adding sample description using options -c and -d.", #Sample
                          "Based on number of valid amplicons: Strong is 4+, Weak is 2-3 and None 0-1. Valid amplicon has to be&#10\
-                         a) not AMR related&#10b)have at least 50 target reads&#10c)have <=2 uknown SNPs",
+                         a) chromosomal&#10b)have at least 50 target reads&#10c)have <=2 uknown SNPs",
                          "Relevant for some organisms (e.g. S. Typhi) where some genotypes cannot be determined with single SNP.&#10\
 Shows high level genotypes (in S. Typhi these are 0, 1, 2, 3, 4) that are possible given detected amplicons.&#10\
 Uses all alleles that are supported by >"+str(POSITIVE_CASES_THRESHOLD)+"reads.&#10'Any' means detected amplicons provide no information on the high level genotypes.", #HL genotypes
-                         "Shows only the most specific genotype based on detected amplicons. Will not show multiple genotypes even if sample consists of more than one.", #Genotype
+                         "Shows only the most specific genotype based on detected amplicons. Will show multiple genotypes if they are not ancestor and descendant", #Genotype
                          "Blank field means AMR amplicons not detected,&#10Amplicon name means gene detected, but doesn't have AMR mutations,&#10\
 Mutation description means this mutation was detected in respective amplicon", #Implied AMR
                           "Total reads in FASTQ files. If classification is done from BAM files this field will be blank.", #Total reads
@@ -550,8 +597,9 @@ Mutation description means this mutation was detected in respective amplicon", #
 
     def calculate_error_rate(self, results: List[ClassificationResult])-> float:
         '''Calculates the expected error rate based on PHRED/Q scores and
-        weighted by read counts'''
-        self._sequencing_error_rate=sum( [(f.negative_cases+f.positive_cases)*f.read_error_rate for f in results] )/sum( [(f.negative_cases+f.positive_cases) for f in results] )
+        weighted by read counts. In case no reads were mapped returns -1'''
+        if sum( [(f.negative_cases+f.positive_cases) for f in results] )>0:
+            self._sequencing_error_rate=sum( [(f.negative_cases+f.positive_cases)*f.read_error_rate for f in results] )/sum( [(f.negative_cases+f.positive_cases) for f in results] )
         return self._sequencing_error_rate
     
     def get_error_rate_blurb(self) -> str:
@@ -573,7 +621,8 @@ Mutation description means this mutation was detected in respective amplicon", #
             for optional_value in self.OPTIONAL_COLUMN:
                 self.HEADER_VALUES.remove(optional_value)
         main_header+='<div>Model name: '+ self._model_file + \
-                        ', model date: '+self._model_date+'</div>\n'
+                        ', model date: '+self._model_date + \
+                            ', AmpliconTyper v'+self._software_version+'</div>\n'
         main_header+=self.get_error_rate_blurb()
         main_header+=self.utilities.insert_paragraph(1)
         main_header+="<table>\n"
@@ -655,7 +704,7 @@ For high level genotypes, a range of possible gnotypes (e.g. 0-2 or 3-4) is repo
                          
     def __init__(self) -> None:
         self._utilities=ReportingUtilities()
-        self._reporting_genotype=ReportingGenotype()
+        #self._reporting_genotype=ReportingGenotype()
 
     def get_table_header(self, sample: SampleReportValues) -> str:
         text=self._utilities.insert_paragraph(2)

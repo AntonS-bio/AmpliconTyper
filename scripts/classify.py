@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 from map import ReadMapper
 import pysam as ps
 
-VERSION="0.1.33"
+VERSION="0.1.34"
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
     target_regions: List[Amplicon] = []
@@ -208,9 +208,9 @@ async def classify(temp_dir, args):
     print("Generating report")
     length_parameters={"-s": ReadsMatrix.permitted_read_soft_clip, "-l":ReadsMatrix.permitted_mapped_sequence_len_mismatch}
     if not args.fastqs is None:
-        report=ClasssifierReport(output_file, model_file, args.organism_presence_cutoff, length_parameters, sample_labels, mapping_results=mapper.results)
+        report=ClasssifierReport(output_file, model_file, VERSION, args.organism_presence_cutoff, length_parameters, sample_labels, mapping_results=mapper.results)
     else:
-        report=ClasssifierReport(output_file, model_file, args.organism_presence_cutoff, length_parameters, sample_labels)
+        report=ClasssifierReport(output_file, model_file, VERSION, args.organism_presence_cutoff, length_parameters, sample_labels)
     report.create_report(results)
     rmtree(temp_dir)
     print("Done")

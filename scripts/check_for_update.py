@@ -126,7 +126,8 @@ class UpdateChecker:
                                 self._result+="AmpliconTyper is up to date"+"\n"
                             else:
                                 self._result+=f'Newer version ({self._tool_latest_github}) of the AmpliconTyper is available'+"\n"
-                                self._result+=f'Please update using "conda install bioconda::amplicontyper={self._tool_latest_github}"'+"\n"
+                                self._result+=f'Please update using "mamba install bioconda::amplicontyper={self._tool_latest_github}" (faster)' +"\n"
+                                self._result+=f'or "conda install bioconda::amplicontyper={self._tool_latest_github}" (slower)'+"\n"
                             return True
                 self._result+="Could not check for amplicontyper on Conda. It's probably not a problem"+"\n"
                 return False

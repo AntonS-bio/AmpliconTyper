@@ -15,7 +15,7 @@ MIDDLE_WIDE='</td class=td_alt_wide><td>'
 
 class ClasssifierReport:
 
-    def __init__(self, output_file: str, models_file: str, positive_amplicons_threshold: float, length_parameters: Dict[str, int],
+    def __init__(self, output_file: str, models_file: str, software_version: str, positive_amplicons_threshold: float, length_parameters: Dict[str, int],
                  sample_labels:Dict[str, str]={}, mapping_results: List[MappingResult]=[]) -> None:
         self._positive_amplicons_threshold = positive_amplicons_threshold/100
         self._report_utilities=ReportingUtilities()
@@ -27,6 +27,7 @@ class ClasssifierReport:
         self.sample_labels=sample_labels
         self.sample_hyperlinks={}
         self.mapping_results={}
+        self._software_version=software_version
         self._length_parameters=length_parameters #the inputs values for -s and -l.
         for item in mapping_results:
             self.mapping_results[item.sample_name] = item.total_reads
@@ -34,7 +35,7 @@ class ClasssifierReport:
 
     ####START Write models' summary
     def _write_model_summary(self, results) -> str:
-        model_summary='<div class=header_line><a name="ModelSigna ures">Model Signatures</a><div><a href="#Summary">Back to Summary</a></div></div>\n'
+        model_summary='<div class=header_line><a name="ModelSignatures">Model Signatures</a><div><a href="#Summary">Back to Summary</a></div></div>\n'
         model_summary+=self._report_utilities.insert_paragraph(1)
         model_summary+="<table>\n"
         model_summary+="\t<tbody>\n"
@@ -69,7 +70,7 @@ class ClasssifierReport:
         self.output_file.write("<body>\n")
 
         summary_table=SummaryTable( self._report_utilities.get_most_recent_model_element(results),
-                                    self._model_file, "high_level_genotypes" in self.models_data.metadata)
+                                    self._model_file, self._software_version, "high_level_genotypes" in self.models_data.metadata)
         self.output_file.write( self._report_utilities.get_styles() )
         summary_table.calculate_error_rate(results)
         self.output_file.write( summary_table.get_main_header() )
