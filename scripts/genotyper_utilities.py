@@ -27,19 +27,22 @@ def load_hierarchy(model_file: str, heirarchy_file:str) -> None:
 
 
 
-def test(model_file: str) -> None:
-    pass
-    # with open("/home/lshas17/AmpliconTyper/models/paratyphi_A_v3.pkl", "rb") as input_model:
+def test() -> None:
+    # with open("~/AmpliconTyper/models/paratyphi_A_v3.pkl", "rb") as input_model:
     #     model_manager_para: Dict[str, Classifier] =load(input_model)
-    # with open("/home/lshas17/AmpliconTyper/models/typhi_v11.pkl", "rb") as input_model:
-    #     model_manager_para: Dict[str, Classifier] =load(input_model)
+    with open(expanduser("~/AmpliconTyper/models/typhi_v11.pkl"), "rb") as input_model:
+        model_manager: Dict[str, Classifier] =load(input_model)
 
+    with open(expanduser("~/Typhi/311/311_v6/train_outputs/model.pkl"), "rb") as input_model:
+        extra_model: Dict[str, Classifier] =load(input_model)
 
-    # new_model_file=expanduser("/home/lshas17/AmpliconTyper/models/typhi_v12_temp.pkl")
-    # with open(new_model_file, "wb") as new_model_file_output:
-    #     dump(model_manager_para, new_model_file_output)
+    model_manager.classifiers["3.1.1_v6"]=extra_model.classifiers["3.1.1_v6"]
+    
+    new_model_file=expanduser("~/Typhi/311/311_v6/train_inputs/typhi_v12_test.pkl")
+    with open(new_model_file, "wb") as new_model_file_output:
+        dump(model_manager, new_model_file_output)
 
-    # with open("/home/lshas17/paratyphi/model/gt_snps.tsv") as snps:
+    # with open("~/paratyphi/model/gt_snps.tsv") as snps:
     #     snps.readline()
     #     for line in snps:
     #         contig_id, reference_nucl, Alt_nucl, GT, position, is_amr=line.strip().split("\t")
@@ -51,9 +54,6 @@ def test(model_file: str) -> None:
     #             snp.genotypes[Alt_nucl]=GT
     #         model_manager_para.classifiers[contig_id].genotype_snps.append(snp)
 
-    # new_model_file=expanduser("/home/lshas17/AmpliconTyper/models/paratyphi_A_v4.pkl")
-    # with open(new_model_file, "wb") as new_model_file_output:
-    #     dump(model_manager_para, new_model_file_output)
 
 def rename_mdr_loci(model_manager: ModelsData) -> None:
     new_names={"chr_4.3.1.1_none_LT904852.1":"chromosomal_MDR_yidA",
@@ -96,6 +96,10 @@ def main():
         parser.print_help()
         exit(0)
 
+    if args.test:
+        test()
+        exit(0)
+
     if args.model is None:
         print("To get reference sequence a model file must be specified!")
         exit(0)
@@ -104,8 +108,6 @@ def main():
         print(f'Model file {model_file} does not exist!')
         exit(0)
 
-    if args.test:
-        test(model_file)
     if args.reference or args.snps:
         if args.reference:
             get_reference_fasta(model_file)
