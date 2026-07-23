@@ -460,7 +460,7 @@ class SampleReportValues:
     @property
     def target_org_support(self) -> str:
         '''Returns and object containing Classifier models and metadata for the models'''
-        valid_amplicons=sum([1 if not f.is_transient and f.target_org_reads>50 and len(f.dominant_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
+        valid_amplicons=sum([1 if not f.is_transient and f.target_org_reads>=POSITIVE_CASES_THRESHOLD and len(f.dominant_unknown_snps)<=2 else 0 for f in  self._amplicon_results.values()])
         if valid_amplicons>=4:
             return "Strong"
         elif valid_amplicons>=2:
@@ -691,7 +691,7 @@ class SampleTable:
                          "Percentage of mapped reads that were classified as target organism and that satisfied -s and -l length parameteres",
                          "Number of reads that were classified as target organism and that satisfied -s and -l length parameteres",
                          f'Number of SNPs detected that match known SNPs defined in classifier model file you used.&#10\
-Includes all alleles different from references that occur in >{POSITIVE_CASES_THRESHOLD} reads and no less than {GT_REPORTING_MIN_READ_PERCENT}% of all reads',
+Includes all alleles different from references that occur in >{POSITIVE_CASES_THRESHOLD} reads and no less than {GT_REPORTING_MIN_READ_PERCENT*100}% of all reads',
                          f'Shows those detected SNPs that match known SNPs in classifier model file you used and also are the most common nucleotide that position.&#10\
 E.g. if at position 254 the reference is C, but in reads the most common nucleotide is T this would count in this column.&#10\
 If T occcured, but the most common was C, this would not count in this column. ',

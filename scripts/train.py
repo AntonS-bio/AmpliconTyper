@@ -107,6 +107,8 @@ if __name__=="__main__":
         exc_type, exc_obj, exc_tb = exc_info()
         lf = traceback.extract_tb(exc_tb)[-1]
         print("Program terminated with an error:")
+        full_message = "".join(traceback.format_exception(exc_type, exc_obj, exc_tb))
+        print(full_message)
         print("File: ", lf.filename,", Line: ", lf.lineno)
         print(e)
     
