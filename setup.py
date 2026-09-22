@@ -4,7 +4,7 @@ from setuptools.command.install import install
 import os
 import sys
 
-__version__ = '0.1.35'
+__version__ = '0.1.36'
 
 def readme():
     with open('README.md') as f:

@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import subprocess 
 from typing import List, Dict
 from pickle import load
-from sys import exc_info
+from sys import exc_info, exit
 from traceback import extract_tb
 from os.path import  expanduser, join, exists, basename, splitext
 from os import mkdir
@@ -20,7 +20,8 @@ warnings.filterwarnings("ignore")
 from map import ReadMapper
 import pysam as ps
 
-VERSION="0.1.35"
+VERSION="0.1.36"
+exit_with_error=False
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
     target_regions: List[Amplicon] = []
@@ -111,11 +112,12 @@ def get_arguments():
     return args
 
 async def classify(temp_dir, args):
-
+    global exit_with_error
     mkdir(temp_dir)
 
     if args.organism_presence_cutoff<1 and args.organism_presence_cutoff!=0:
         print(f'Option "organism_presence_cutoff" has value {args.organism_presence_cutoff} which is below 1, but not 0. Valid values are 0 to 100.')
+        exit_with_error=True
         return
 
     ReadsMatrix.permitted_read_soft_clip=int(args.max_soft_clip)
@@ -124,6 +126,7 @@ async def classify(temp_dir, args):
     #check minimap2 is installed
     if which("minimap2") is None:
         print(f'Missing minimap2 program. It is available via Bioconda. Exiting.')
+        exit_with_error=True
         return
 
     cpu_to_use=int(args.cpus)
@@ -133,12 +136,14 @@ async def classify(temp_dir, args):
     model_file = args.model
     if not exists(model_file):
         print(f'Could not located model file {model_file}. Exiting.')
+        exit_with_error=True
         return
 
     output_file=input_processing.check_output_dir(args.output_file)
     output_filename, output_file_extension = splitext(output_file)
     if output_file_extension!=".html":
         print(f'Output file {args.output_file} should end with .html, not {output_file_extension}' )
+        exit_with_error=True
         return
 
 
@@ -149,9 +154,11 @@ async def classify(temp_dir, args):
     if not args.sample_descriptions is None: #this has to be checked early in case file does not exist
         metadata_file=expanduser(args.sample_descriptions)
         if not input_processing.file_exists(metadata_file):
+            exit_with_error=True
             return
         metadata_column, metadata_sep = input_processing.check_metadata(args, metadata_file)
         if not input_processing.check_column_in_descriptions(metadata_file,metadata_column, metadata_sep):
+            exit_with_error=True
             return
 
     if not args.target_reads_bams is None:
@@ -165,6 +172,7 @@ async def classify(temp_dir, args):
     if not args.fastqs is None:
         args.fastqs=expanduser(args.fastqs)
         if not input_processing.file_exists(args.fastqs):
+            exit_with_error=True
             return
         print("Starting read mapping to reference")
         mapper=ReadMapper(temp_dir,
@@ -216,8 +224,8 @@ async def classify(temp_dir, args):
     print("Done")
 
 async def check_for_updates():
+    global exit_with_error
     temp_dir=expanduser( join("./",str(uuid4())) )
-
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
@@ -225,6 +233,7 @@ async def check_for_updates():
         print("\n"+checker.result)
 
     except Exception as e:
+        exit_with_error=True
         exc_type, exc_obj, exc_tb = exc_info()
         lf = extract_tb(exc_tb)[-1]
         print("Program terminated with an error:")
@@ -232,6 +241,9 @@ async def check_for_updates():
         print(e)
     if exists(temp_dir): #clean up
         rmtree(temp_dir)
+
+    if exit_with_error:
+        exit(1)
 
 def main():
     pass

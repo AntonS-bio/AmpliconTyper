@@ -143,6 +143,8 @@ class AmpliconReportValues:
             return result
         elif self.target_org_reads>=POSITIVE_CASES_THRESHOLD:
             for snp in self.all_known_snps:
+                if snp.implication==GenotypeSNP.UNINFORMATIVE_ALLELE:
+                    return result
                 result+=snp.implication+" ("+'{:.0%}'.format(snp.freq)+")"
                 # if self.target_org_reads<POSITIVE_CASES_THRESHOLD:
                 #     result+="(?)"
@@ -379,9 +381,10 @@ class ReportingGenotype:
                     ancestors.append(second_allele)
         #remove all ancestors
         for allele in ancestors:
-            alleles.remove(allele)
+            if allele in alleles: #sometimes two different alleles have same ancestor. This prevents the removal of the ancenstor twice which would throw error.
+                alleles.remove(allele)
         #case 2 - remove redundant alles keeping the ones with highest number of reads
-        Counter(alleles)
+        
         unique_gts=Counter([f.implication for f in alleles])
         except_counts=[key for key, value in unique_gts.items() if value>1]
         alleles_to_drop=[]
