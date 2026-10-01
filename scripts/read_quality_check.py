@@ -1,7 +1,7 @@
 # Efficient script to count PHRED quality score occurrences in BAM file
 import pysam as ps
-from collections import Counter
 from typing import Dict
+import numpy as np
 from threading import Thread
 from itertools import islice
 
@@ -42,17 +42,18 @@ class ReadQualityChecker():
         :return Name of the bam file and the expected error rate as decimal
         :rtype: Tuple(str, float)
         """
-        bam_qual_scores = Counter()
+        score_counts = np.zeros(256, dtype=np.int64)
         with ps.AlignmentFile(bam_file, "rb", check_sq=False) as bam:
-            
-            # Iterate through all reads in the BAM file
+
+            # Iterate through every second read in the BAM file
             for read in islice(bam.fetch(until_eof=True), 0, None, 2):
-                if read.query_qualities is not None:
-                    # Update counter with quality scores from this read
-                    bam_qual_scores.update(read.query_qualities)
-                    
-        bam_qual_scores={key: value/sum(bam_qual_scores.values()) for key, value in bam_qual_scores.items()}
-        return self.expected_error(bam_qual_scores)
+                qualities = read.query_qualities
+                if qualities is not None:
+                    score_counts += np.bincount(np.frombuffer(qualities, dtype=np.uint8), minlength=256)
+
+        total = int(score_counts.sum())
+        bam_qual_scores={int(score): int(score_counts[score])/total for score in np.nonzero(score_counts)[0]}
+        return float(self.expected_error(bam_qual_scores))
 
 
 

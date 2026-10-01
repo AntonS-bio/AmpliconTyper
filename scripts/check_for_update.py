@@ -137,7 +137,7 @@ class UpdateChecker:
         return False
 
 
-    async def get_result(self, running_version: str) -> str:
+    def get_result(self, running_version: str) -> str:
         self._running_version=running_version
         if not self.get_installed_tool_version():
             return self._result

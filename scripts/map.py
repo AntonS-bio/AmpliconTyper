@@ -1,9 +1,8 @@
 import subprocess
-import gzip
+from shlex import quote
 from typing import  Dict, List
-from os import  walk,  remove, mkdir
+from os import  walk, mkdir
 from os.path import isfile, join,  exists, isdir, expanduser, split
-import uuid
 import pysam as ps
 # from read_classifier import Classifier
 # import pickle
@@ -99,48 +98,40 @@ class ReadMapper:
                             self._barcode_files[path] = []
                         self._barcode_files[path].append(name)
 
-    def _merge_samples(self, source_dir: str) -> str:
-        """Merges all files ending in .fq/.fastq with or without .gz into single file
-        Nanopore usually outputs multiple files for same barcode
+    def _source_files(self, source_dir: str) -> str:
+        """Space separated, shell quoted list of all .fq/.fastq files (with or without .gz)
+        for a barcode. Nanopore usually outputs multiple files for same barcode
 
         :param source_dir: Source files directory, should match key from self._barcode_files
         :type source_dir: str
        
-        :return GUID string value for the merged FASTQ
+        :return Shell quoted file names
         :rtype: str
         """
-        merged_file=join(self.temp_dir, str(uuid.uuid4())+".fq.gz" )
-        buffer_size = 16000
-        with open(merged_file, 'wb') as dest_file:
-            for filename in self._barcode_files[source_dir]:
-                with open( join(source_dir,filename), 'rb') as source_file:
-                    chunk = True
-                    while chunk:
-                        chunk = source_file.read(buffer_size)
-                        dest_file.write(chunk)
-        return merged_file
+        return " ".join(quote(join(source_dir, filename)) for filename in self._barcode_files[source_dir])
 
-    def _map_helper(self, fastq: str,  output_name:str) -> MappingResult:
-        """Maps supplied FASTQ to reference and returns total and mapped read count
+    def _map_helper(self, fastqs: str,  output_name:str) -> MappingResult:
+        """Maps supplied FASTQs to reference and returns total and mapped read count
         
-        :param fastq: either file ending in .fq/fq.gz or folder with FASTQ files
-        :type fastq: str
-        
-        :param reference: Reference FASTA sequence for mapping
-        :type reference: str
+        :param fastqs: Shell quoted FASTQ files (.fq/.fastq with or without .gz)
+        :type fastqs: str
         
         :param output_name: Full name to output BAM file
         :type output_name: str
 
-        :return Tuple with total and mapped reads count
-        :rtype: Tuple(int,int)
+        :return Mapping result with total and mapped reads count
+        :rtype: MappingResult
         """
         result=MappingResult(output_name)
-        result.total_reads = sum(1 for f in gzip.open(fastq, 'rb')) / 4
-        subprocess.run(f'minimap2 -ax map-ont {self.reference} {fastq} | samtools view -@ {self._cpus} -F 2308 -bS  | samtools sort -@ {self._cpus} -o {output_name}', \
+        #count FASTQ lines in parallel with mapping. grep -c '' also counts a last line without newline
+        line_counter=subprocess.Popen(f'zcat -f {fastqs} | grep -c ""', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+        #multiple query files given to minimap2 are treated as paired segments, so stream them as one input instead
+        subprocess.run(f'cat {fastqs} | minimap2 -t {self._cpus} -ax map-ont {self.reference} - | samtools view -@ {self._cpus} -F 2308 -u | samtools sort -@ {self._cpus} -o {quote(output_name)}', \
                 shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
         # 2308=256(not primary) + 4(not aligned)+2064(not supplementary alignment)
-        subprocess.run(f'samtools index {output_name}', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+        subprocess.run(f'samtools index {quote(output_name)}', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+        line_count, _ = line_counter.communicate()
+        result.total_reads = int(line_count.decode().strip() or 0) / 4
         bam = ps.AlignmentFile(output_name, "rb",check_sq=False)
         result.mapped_reads = bam.mapped
         bam.close()
@@ -157,10 +148,8 @@ class ReadMapper:
         self.source_to_samples()
         self.results: List[MappingResult]=[]
         for key in self._barcode_files.keys():
-            merged_file=self._merge_samples(key)
-            self.results.append( self._map_helper(merged_file,  join(bams_dir, key.split("/")[-1]+".bam") ) )
+            self.results.append( self._map_helper(self._source_files(key),  join(bams_dir, key.split("/")[-1]+".bam") ) )
             print(self.results[-1].description)
-            remove(merged_file)
         return True
 
     def output_names(self, bams_dir: str) -> bool:

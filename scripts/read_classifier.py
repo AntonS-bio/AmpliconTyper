@@ -1,4 +1,6 @@
 from collections import Counter
+from functools import lru_cache
+from pickle import load
 from os.path import exists
 from typing import Dict, List, Tuple
 import uuid
@@ -22,6 +24,33 @@ from data_classes import Amplicon
 
 base_dic={"A":1,"C":2,"G":3,"T":4,"N":5,"-":0}
 number_dic=dict([ (value, key) for key,value in base_dic.items() ])
+
+#lookup table from ASCII byte to base_dic code, anything not in base_dic is INVALID_BASE
+INVALID_BASE=255
+BASE_CODES=np.full(256, INVALID_BASE, dtype=np.uint8)
+for _base, _code in base_dic.items():
+    BASE_CODES[ord(_base)]=_code
+
+def _aligned_pairs(read) -> np.array:
+    """Equivalent of read.get_aligned_pairs(matches_only=True) as (n,2) array
+    of (query_pos, ref_pos), built from CIGAR which is much faster"""
+    q=0
+    r=read.reference_start
+    query_pos=[]
+    ref_pos=[]
+    for op, length in read.cigartuples:
+        if op==0 or op==7 or op==8: #M, =, X
+            query_pos.append(np.arange(q, q+length))
+            ref_pos.append(np.arange(r, r+length))
+            q+=length
+            r+=length
+        elif op==1 or op==4: #I, S
+            q+=length
+        elif op==2 or op==3: #D, N
+            r+=length
+    if not query_pos:
+        return np.zeros((0, 2), dtype=np.int64)
+    return np.column_stack((np.concatenate(query_pos), np.concatenate(ref_pos)))
 
 class GenotypeSNP:
     UNINFORMATIVE_ALLELE="known, but uninformative allele"
@@ -180,61 +209,50 @@ class ReadsMatrix:
     def read_bam(self, target_regions: List[Amplicon], full_length_only: bool = True) -> None:
         self._read_matrices:  Dict[str, np.array]={}
         self._wrong_len_reads:  Dict[str, int]={}
-        bam = ps.AlignmentFile(self.bam_file, "rb",check_sq=False)
-        for target_amplicon in target_regions:#amplicon_coordinates.index:
-            target_start, target_end = [target_amplicon.ref_seq.ref_start, target_amplicon.ref_seq.ref_end]
-            target_contig=target_amplicon.ref_seq.refseq_id
-            alignment_matrix=np.zeros( (bam.count(contig=target_contig, start=target_start, end=target_end), target_end-target_start), dtype=np.int8)
-            used_rows=[False]* alignment_matrix.shape[0] #this will allow removal of empty rows when only full length reads are required
-            read_ids=[""]* alignment_matrix.shape[0]
-            orientation=[]
-            self._wrong_len_reads[target_amplicon.name]=0
-            for i,read in enumerate(bam.fetch(contig=target_contig, start=target_start, end=target_end)):
-                if not read.is_unmapped:
-                    if read.query_sequence is None:
+        check_len = ReadsMatrix.train_mode or full_length_only
+        with ps.AlignmentFile(self.bam_file, "rb",check_sq=False) as bam:
+            for target_amplicon in target_regions:
+                target_start, target_end = target_amplicon.ref_seq.ref_start, target_amplicon.ref_seq.ref_end
+                target_len = target_end - target_start
+                target_contig=target_amplicon.ref_seq.refseq_id
+                rows: List[np.array]=[]
+                read_ids: List[str]=[]
+                wrong_len=0
+                for read in bam.fetch(contig=target_contig, start=target_start, end=target_end):
+                    if read.is_unmapped:
+                        continue
+                    seq=read.query_sequence
+                    if seq is None:
                         print(f'Bam file {self.bam_file} has an empty read aligning to {target_amplicon.name} this should not happen')
                         continue
                     #allows for soft clippping on both sides (first line), reads shorter than target (second line), reads longer than target (third line)
-                    if ReadsMatrix.train_mode and not (read.query_alignment_start < ReadsMatrix.permitted_read_soft_clip \
-                                                   and (read.query_length-read.query_alignment_end) < ReadsMatrix.permitted_read_soft_clip \
-                                                   and (read.query_alignment_end - read.query_alignment_start) < (target_end - target_start) + ReadsMatrix.permitted_mapped_sequence_len_mismatch \
-                                                   and (read.query_alignment_end - read.query_alignment_start) > (target_end - target_start) - ReadsMatrix.permitted_mapped_sequence_len_mismatch):
-                        #read too short/too long
-                        self._wrong_len_reads[target_amplicon.name]+=1
+                    if check_len:
+                        q_start, q_end = read.query_alignment_start, read.query_alignment_end
+                        aligned_len = q_end - q_start
+                        if not (q_start < ReadsMatrix.permitted_read_soft_clip \
+                                and (read.query_length-q_end) < ReadsMatrix.permitted_read_soft_clip \
+                                and aligned_len < target_len + ReadsMatrix.permitted_mapped_sequence_len_mismatch \
+                                and aligned_len > target_len - ReadsMatrix.permitted_mapped_sequence_len_mismatch):
+                            wrong_len+=1
+                            continue #This will skip non-full length queries
+
+                    pairs = _aligned_pairs(read)
+                    pairs = pairs[(pairs[:, 1] >= target_start) & (pairs[:, 1] < target_end)]
+                    if pairs.shape[0]==0:
                         continue
-                    if not ReadsMatrix.train_mode and full_length_only and not (\
-                            read.query_alignment_start < ReadsMatrix.permitted_read_soft_clip \
-                            and (read.query_length-read.query_alignment_end) < ReadsMatrix.permitted_read_soft_clip \
-                            and (read.query_alignment_end - read.query_alignment_start) < (target_end - target_start) + ReadsMatrix.permitted_mapped_sequence_len_mismatch \
-                            and (read.query_alignment_end - read.query_alignment_start) > (target_end - target_start) - ReadsMatrix.permitted_mapped_sequence_len_mismatch
-                            ) :
-                        self._wrong_len_reads[target_amplicon.name]+=1
-                        continue #This will skip non-full length queries
-                    orientation.append(read.is_forward)
-                    
-                    aligned_pairs = read.get_aligned_pairs()
-                    valid_pairs = [(qpos, rpos-target_start) for qpos, rpos in aligned_pairs
-                        if rpos is not None and target_start <= rpos < target_end and qpos is not None]
-                    # query_nt = [ read_ref_pair[0] for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
-                    #                 read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
-                    # ref_nt = [ read_ref_pair[1]-target_start for read_ref_pair in read.get_aligned_pairs() if not read_ref_pair[1] is None and
-                    #             read_ref_pair[1]<target_end and read_ref_pair[1]>=target_start and not read_ref_pair[0] is None]
-                    if valid_pairs:
-                        query_nt, ref_nt = zip(*valid_pairs)
-                        bases = set(read.query_sequence[f] for f in query_nt)
-                    else:
-                        continue
-                    #bases=set([ read.query_sequence[f] for f in query_nt])
-                    if not bases.issubset(base_dic.keys()):
+                    codes = BASE_CODES[np.frombuffer(seq.encode(), dtype=np.uint8)[pairs[:, 0]]]
+                    if (codes==INVALID_BASE).any():
                         print(f'Ambigous bases not supported: {self.bam_file} target {target_amplicon.name}. Target will be ignored')
                         break
 
-                    alignment_matrix[i, ref_nt]=[ base_dic[read.query_sequence[f]] for f in query_nt]
-                    used_rows[i] = True
-                    read_ids[i] = read.query_name
+                    row = np.zeros(target_len, dtype=np.int8)
+                    row[pairs[:, 1]-target_start] = codes
+                    rows.append(row)
+                    read_ids.append(read.query_name)
 
-            self._read_ids[target_amplicon.name]=[ z for f, z in zip(used_rows, read_ids) if f ]
-            self._read_matrices[target_amplicon.name]=alignment_matrix[used_rows]
+                self._wrong_len_reads[target_amplicon.name]=wrong_len
+                self._read_ids[target_amplicon.name]=read_ids
+                self._read_matrices[target_amplicon.name]=np.vstack(rows) if rows else np.zeros((0, target_len), dtype=np.int8)
 
 class ClassificationResult:
     """Class to store classfication predictions and
@@ -267,7 +285,13 @@ class ClassificationResult:
         # if self._amplicon.name=="4.3.1.2_v3":
         #     a=1
         if data.shape[0]>0:
-            self._allele_frequencies=list(map( lambda x: Counter(x).most_common(), np.transpose(data) ))
+            #per column list of (nucleotide code, count) ordered by count, ties by first occurrence (same as Counter.most_common)
+            counts=np.stack([np.count_nonzero(data==k, axis=0) for k in number_dic.keys()])
+            first_seen=np.stack([np.argmax(data==k, axis=0) for k in number_dic.keys()])
+            order=np.lexsort((first_seen, -counts), axis=0)
+            codes=list(number_dic.keys())
+            self._allele_frequencies=[ [(codes[k], int(counts[k, col])) for k in order[:, col] if counts[k, col]>0]
+                                      for col in range(data.shape[1]) ]
             #self._allele_frequencies = [self.get_most_common(col) for col in data.T]
             most_common=[f[0][0] for f in self._allele_frequencies]
             most_common_frequency=[f[0][1] for f in self._allele_frequencies]
@@ -323,11 +347,11 @@ class ClassificationResult:
 
     @property
     def positive_cases(self) -> int:
-        return Counter(self._predicted_classes)[1]
+        return int(np.count_nonzero(np.asarray(self._predicted_classes) == 1))
 
     @property
     def negative_cases(self) -> int:
-        return Counter(self._predicted_classes)[0]
+        return int(np.count_nonzero(np.asarray(self._predicted_classes) == 0))
 
     @property
     def amplicon(self) -> Amplicon:
@@ -584,8 +608,8 @@ class Classifier:
         self._model = eclf.fit(train_data, train_classes)
 
     def _get_distances(self, reads: np.array) -> np.array:
-        ref_vector=[base_dic[f] for f in self._nucletoide_seq[1:]]
-        distances=np.apply_along_axis(lambda x: len(ref_vector)-sum(x==ref_vector), axis=1, arr=reads[:,:-1])
+        ref_vector=np.array([base_dic[f] for f in self._nucletoide_seq[1:]])
+        distances=len(ref_vector)-np.count_nonzero(reads[:,:-1]==ref_vector, axis=1)
         return distances
 
     def _classify(self, data: np.array):
@@ -598,7 +622,10 @@ class Classifier:
             distances=self._get_distances(data)
             upper_limit=self._model.means_[0][0]+0.13*self._model.covariances_[0][0][0] / self._model.n_features_in_ **(1/2)
             lower_limit=self._model.means_[0][0]-0.13*self._model.covariances_[0][0][0] / self._model.n_features_in_ **(1/2)
-            predictions=np.asarray([1 if f<=upper_limit and f>=lower_limit else 0 for f in distances ])
+            predictions=((distances<=upper_limit) & (distances>=lower_limit)).astype(np.int64)
+        elif isinstance(self._model, VotingClassifier) and self._model.voting=="hard" and len(self._model.estimators_)==1:
+            #majority vote of a single estimator is its own prediction, skip VotingClassifier's per-row vote counting
+            predictions=self._model.le_.inverse_transform(self._model.estimators_[0].predict(data))
         else:
             predictions=self._model.predict(data)
         return predictions
@@ -719,3 +746,14 @@ class ModelsData:
     @metadata.setter
     def metadata(self, value: Dict[str, object]):
         self._metadata = value    
+
+@lru_cache(maxsize=None)
+def load_models_data(model_file: str) -> ModelsData:
+    """Load pickled ModelsData once per process and reuse it afterwards.
+    Returned object is shared, so it must not be modified by callers
+
+    :param model_file: Pickle (.pkl) file containing the models
+    :type model_file: str
+    """
+    with open(model_file, "rb") as input_model:
+        return load(input_model)

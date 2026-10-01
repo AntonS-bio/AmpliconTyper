@@ -1,20 +1,20 @@
 from argparse import ArgumentParser
 import subprocess 
-from typing import List, Dict
-from pickle import load
+from typing import List, Dict, Set
 from sys import exc_info, exit
 from traceback import extract_tb
 from os.path import  expanduser, join, exists, basename, splitext
 from os import mkdir
 from shutil import which, rmtree
 from uuid import uuid4
-from asyncio import gather, get_event_loop
+from asyncio import get_event_loop
+from threading import Thread
 from check_for_update import UpdateChecker
 from data_classes import Amplicon
 from input_processing import InputProcessing
 from model_manager import ModelManager
 from classifier_report import ClasssifierReport
-from read_classifier import Classifier, ReadsMatrix, ModelsData, ClassificationResult
+from read_classifier import Classifier, ReadsMatrix, ModelsData, ClassificationResult, load_models_data
 import warnings
 warnings.filterwarnings("ignore")
 from map import ReadMapper
@@ -25,9 +25,7 @@ exit_with_error=False
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
     target_regions: List[Amplicon] = []
-    with open(model_file, "rb") as input_model:
-        models_data: ModelsData = load(input_model)
-        model_manager: Dict[str, Classifier] = models_data.classifiers
+    model_manager: Dict[str, Classifier] = load_models_data(model_file).classifiers
     for name, model in model_manager.items():
         bed_line=f'{model.name}\t0\t{len(model.nucletoide_seq)}\t{model.name}'
         target_regions.append(Amplicon.from_bed_line(bed_line, fasta_file))
@@ -42,9 +40,7 @@ def generate_ref_fasta(model_file: str, ref_file: str) -> None:
     :param ref_file: file name to which to save FASTA sequences
     :type models_file: str
     """
-    with open(model_file, "rb") as input_model:
-        models_data: ModelsData = load(input_model)
-        model_manager: Dict[str, Classifier] = models_data.classifiers
+    model_manager: Dict[str, Classifier] = load_models_data(model_file).classifiers
     with open(ref_file, "w" ) as ref_output:
         for name, model in model_manager.items():
             ref_output.write(">"+str(model.name)+"\n")
@@ -58,12 +54,11 @@ def get_postive_reads(results: List[ClassificationResult], target_reads_bams: st
     :param target_reads_bams: Directory to which bam files will be saved
     :type target_reads_bams: str
     """
-    postive_read_ids: Dict[str, List[str]]={}
+    postive_read_ids: Dict[str, Set[str]]={}
     for result in results:
         if result.sample not in postive_read_ids:
-            postive_read_ids[result.sample]=[]
-        for read_id in result.positive_read_ids:
-            postive_read_ids[result.sample].append(read_id)
+            postive_read_ids[result.sample]=set()
+        postive_read_ids[result.sample].update(result.positive_read_ids)
 
     for sample, ids in postive_read_ids.items():
         bam = ps.AlignmentFile(sample, "rb",check_sq=False)
@@ -149,7 +144,6 @@ async def classify(temp_dir, args):
 
     fasta_file = join(temp_dir,"reference.fasta")
     generate_ref_fasta(model_file, fasta_file)
-    generate_amplicons(model_file, fasta_file)
 
     if not args.sample_descriptions is None: #this has to be checked early in case file does not exist
         metadata_file=expanduser(args.sample_descriptions)
@@ -229,8 +223,15 @@ async def check_for_updates():
     try:
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
-        await gather(checker.get_result(VERSION), classify(temp_dir, input_arguments))
-        print("\n"+checker.result)
+        #run update check in background thread so it overlaps with classification
+        update_thread=Thread(target=checker.get_result, args=(VERSION,), daemon=True)
+        update_thread.start()
+        await classify(temp_dir, input_arguments)
+        update_thread.join(timeout=30)
+        if update_thread.is_alive():
+            print("\nUpdate check did not finish in time, skipped.")
+        else:
+            print("\n"+checker.result)
 
     except Exception as e:
         exit_with_error=True

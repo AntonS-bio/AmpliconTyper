@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Tuple
 import pickle
 from tqdm import tqdm
 import numpy as np
-from read_classifier import ReadsMatrix, Classifier, ClassificationResult, number_dic, GenotypeSNP, ModelsData
+from read_classifier import ReadsMatrix, Classifier, ClassificationResult, number_dic, GenotypeSNP, ModelsData, load_models_data
 from data_classes import Amplicon
 import hashlib
 from read_quality_check import ThreadWithReturnValue, ReadQualityChecker
@@ -315,9 +315,8 @@ class ModelManager:
         :type: Tuple[np.array, Amplicon, str]
         '''
 
-        with open(self._model_output_file, "rb") as model_file:
-            self.models_data: ModelsData = pickle.load(model_file)
-            self.trained_models=self.models_data.classifiers
+        self.models_data: ModelsData = load_models_data(self._model_output_file)
+        self.trained_models=self.models_data.classifiers
 
         reads_data: ReadsMatrix=self._process_bams(bam_file)
 
@@ -353,6 +352,7 @@ class ModelManager:
         self._target_regions=target_regions
         print("Processing data")
         results: List[ClassificationResult] = []
+        load_models_data(self._model_output_file) #load in parent, so forked workers inherit it instead of reloading per BAM
         if __name__ == 'model_manager':
             with Pool(self.cpus_to_use) as p:
                 predictions: List[ClassificationResult] = list(tqdm( p.imap(func=self._classify_new_data_helper, iterable=bam_files), total=len(bam_files) ))

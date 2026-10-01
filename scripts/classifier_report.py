@@ -1,6 +1,6 @@
 import pickle
 from typing import List, Dict
-from read_classifier import ClassificationResult, Classifier, ModelsData
+from read_classifier import ClassificationResult, Classifier, ModelsData, load_models_data
 from os.path import expanduser
 from map import MappingResult
 from tqdm import tqdm
@@ -22,8 +22,7 @@ class ClasssifierReport:
         self._model_file=models_file
         self._output_file_name=output_file
         self.output_file=open( expanduser(output_file), "w" )
-        with open(expanduser(models_file), "rb") as model_file:
-            self.models_data: ModelsData = pickle.load(model_file)
+        self.models_data: ModelsData = load_models_data(expanduser(models_file))
         self.sample_labels=sample_labels
         self.sample_hyperlinks={}
         self.mapping_results={}
