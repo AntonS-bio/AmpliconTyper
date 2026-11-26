@@ -80,36 +80,36 @@ class UpdateChecker:
             self._result+="Couldn't connect to GitHub. This may be due to running AmpliconTyper a lot in short time."+"\n"
         return False
 
-    def get_installed_tool_version(self) -> bool:
-        try:
-            shell_stdout = subprocess.run(f'conda list | grep amplicontyper', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
-            if shell_stdout.returncode!=0:
-                self._result+="Error using conda to check the currently installed version of AmpliconTyper"+"\n"
-                self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
-                return False
-            shell_stdout = shell_stdout.stdout.decode()
-            lines=shell_stdout.strip().split("\n")
-            lines=[f for f in lines if f[0]!="#"]
-            if len(lines)==1:
-                values=[f for f in lines[0].split(" ") if f]
-                #print(values)
-                if values[0]=="amplicontyper" and len(values)>1:
-                    self._tool_current_version=values[1]
-                    if self._tool_current_version!=self._running_version:
-                        self._result+=f'The running AmpliconTyper version is {self._running_version}'
-                        self._result+=f' does not match the Conda version {self._tool_current_version}'+"\n"
-                        self._result+=f'This is not a problem if you are running the tool using "python classify.py..."'+"\n"
-                    return True
-                else:
-                    self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines[0]}'+"\n"
-                    self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
-            else:
-                self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines}'+"\n"
-                self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
-        except Exception as e:
-            self._result+="Couldn't get current version of installed tool."+"\n"
-            self._result+=str(e)
-        return False
+    # def get_installed_tool_version(self) -> bool:
+    #     try:
+    #         shell_stdout = subprocess.run(f'conda list | grep amplicontyper', shell=True, executable="/bin/bash", stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+    #         if shell_stdout.returncode!=0:
+    #             self._result+="Error using conda to check the currently installed version of AmpliconTyper"+"\n"
+    #             self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
+    #             return False
+    #         shell_stdout = shell_stdout.stdout.decode()
+    #         lines=shell_stdout.strip().split("\n")
+    #         lines=[f for f in lines if f[0]!="#"]
+    #         if len(lines)==1:
+    #             values=[f for f in lines[0].split(" ") if f]
+    #             #print(values)
+    #             if values[0]=="amplicontyper" and len(values)>1:
+    #                 self._tool_current_version=values[1]
+    #                 if self._tool_current_version!=self._running_version:
+    #                     self._result+=f'The running AmpliconTyper version is {self._running_version}'
+    #                     self._result+=f' does not match the Conda version {self._tool_current_version}'+"\n"
+    #                     self._result+=f'This is not a problem if you are running the tool using "python classify.py..."'+"\n"
+    #                 return True
+    #             else:
+    #                 self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines[0]}'+"\n"
+    #                 self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
+    #         else:
+    #             self._result+=f'Could not deteremine determine the AmpliconTyper version using conda: {lines}'+"\n"
+    #             self._result+="Run 'conda list | grep amplicontyper'. If nothing shows, you may have installed AmpliconTyper using GitHub."
+    #     except Exception as e:
+    #         self._result+="Couldn't get current version of installed tool."+"\n"
+    #         self._result+=str(e)
+    #     return False
 
     def check_bioconda_release(self) -> bool:
         try:
@@ -122,7 +122,7 @@ class UpdateChecker:
                     values=[f for f in line.split(" ") if f]
                     if values[0]=="amplicontyper":
                         if len(values)>=2 and values[1]==self._tool_latest_github:
-                            if self._tool_current_version==self._tool_latest_github:
+                            if self._running_version==self._tool_latest_github:
                                 self._result+="AmpliconTyper is up to date"+"\n"
                             else:
                                 self._result+=f'Newer version ({self._tool_latest_github}) of the AmpliconTyper is available'+"\n"
@@ -137,10 +137,10 @@ class UpdateChecker:
         return False
 
 
-    async def get_result(self, running_version: str) -> str:
+    def get_result(self, running_version: str) -> str:
         self._running_version=running_version
-        if not self.get_installed_tool_version():
-            return self._result
+        # if not self.get_installed_tool_version():
+        #     return self._result
         if not self.check_github_release():
             return self._result
         if not self.check_bioconda_release():
