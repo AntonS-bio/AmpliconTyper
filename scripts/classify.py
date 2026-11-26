@@ -7,7 +7,7 @@ from os.path import  expanduser, join, exists, basename, splitext
 from os import mkdir
 from shutil import which, rmtree
 from uuid import uuid4
-from asyncio import get_event_loop
+from asyncio import run
 from threading import Thread
 from check_for_update import UpdateChecker
 from data_classes import Amplicon
@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 from map import ReadMapper
 import pysam as ps
 
-VERSION="0.1.36"
+VERSION="0.1.37"
 exit_with_error=False
 
 def generate_amplicons(model_file: str, fasta_file:str) -> List[Amplicon]:
@@ -95,6 +95,8 @@ def get_arguments():
                         help='Specifies maximum nucleotide difference between mapped portion of read and target amplicon', required=False, default=20)
     parser.add_argument('--organism_presence_cutoff', type=float,
                         help='Currently not in use', required=False, default=20.0)
+    parser.add_argument('--skip_update_check', action='store_true',
+                        help='Skip the check for updates')
    
     parser.add_argument('-v', '--version', help=f'Current version is {VERSION}', action='version', version='%(prog)s '+VERSION)
 
@@ -224,14 +226,16 @@ async def check_for_updates():
         input_arguments=get_arguments()
         checker=UpdateChecker(input_arguments.model)
         #run update check in background thread so it overlaps with classification
-        update_thread=Thread(target=checker.get_result, args=(VERSION,), daemon=True)
-        update_thread.start()
+        if not input_arguments.skip_update_check:
+            update_thread=Thread(target=checker.get_result, args=(VERSION,), daemon=True)
+            update_thread.start()
         await classify(temp_dir, input_arguments)
-        update_thread.join(timeout=30)
-        if update_thread.is_alive():
-            print("\nUpdate check did not finish in time, skipped.")
-        else:
-            print("\n"+checker.result)
+        if not input_arguments.skip_update_check:
+            update_thread.join(timeout=30)
+            if update_thread.is_alive():
+                print("\nUpdate check did not finish in time, skipped.")
+            else:
+                print("\n"+checker.result)
 
     except Exception as e:
         exit_with_error=True
@@ -250,5 +254,4 @@ def main():
     pass
 
 if __name__=="classify" or __name__=="__main__":
-    loop = get_event_loop()
-    loop.run_until_complete(check_for_updates())
+    run(check_for_updates())
